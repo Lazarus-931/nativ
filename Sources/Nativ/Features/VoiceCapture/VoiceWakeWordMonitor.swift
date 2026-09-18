@@ -1,13 +1,59 @@
 import AVFoundation
 import Combine
 import Foundation
-import Speech
 
-/// An opt-in, on-device listener. Background audio is streamed in memory and never saved.
+/// Locates the downloaded "Hey Nativ" Core ML model in the Hugging Face hub cache.
+enum WakeWordModelLocator {
+    // TODO: point at the Nativ HF org repo once published.
+    static let repoID = "AlazarM/MM"
+    static let packageName = "hey-native-mm-fp16.mlpackage"
+
+    static func modelURL(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> URL? {
+        let hub = (HuggingFaceCache.defaultHubPath(environment: environment) as NSString)
+            .expandingTildeInPath
+        let parts = repoID.split(separator: "/")
+        guard parts.count == 2 else { return nil }
+        let repo = URL(fileURLWithPath: hub)
+            .appendingPathComponent("models--\(parts[0])--\(parts[1])")
+        let snapshots = repo.appendingPathComponent("snapshots")
+        let fm = FileManager.default
+
+        var snapshot: URL?
+        if let rev = try? String(contentsOf: repo.appendingPathComponent("refs/main"), encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines), !rev.isEmpty,
+            fm.fileExists(atPath: snapshots.appendingPathComponent(rev).path) {
+            snapshot = snapshots.appendingPathComponent(rev)
+        } else {
+            let subdirectories = (try? fm.contentsOfDirectory(
+                at: snapshots, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+            snapshot = subdirectories.filter { $0.hasDirectoryPath }.max {
+                (modified($0) ?? .distantPast) < (modified($1) ?? .distantPast)
+            }
+        }
+        guard let snapshot else { return nil }
+        let package = snapshot.appendingPathComponent(packageName)
+        // A resolvable Manifest.json means the checkpoint download finished.
+        guard fm.fileExists(atPath: package.appendingPathComponent("Manifest.json").path) else {
+            return nil
+        }
+        return package
+    }
+
+    private static func modified(_ url: URL) -> Date? {
+        try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+    }
+}
+
+/// An opt-in, on-device wake-word listener. Microphone audio is streamed in memory,
+/// never saved, and scored by the on-device Core ML model — no transcription. The
+/// detector is isolated behind `wakeDetected`, so any consumer (dictation today, a
+/// full session bootstrap later) can react to a wake without changing this engine.
 @MainActor
 final class VoiceWakeWordMonitor: ObservableObject {
     enum State: Equatable {
-        case off, paused, preparing, listening
+        case off, paused, preparing, listening, needsModel
         case unavailable(String)
 
         var description: String {
@@ -16,6 +62,7 @@ final class VoiceWakeWordMonitor: ObservableObject {
             case .paused: "Wake word is paused while audio is busy."
             case .preparing: "Preparing on-device wake word…"
             case .listening: "Listening for “hey nativ”."
+            case .needsModel: "Download the Hey Nativ model to start listening."
             case let .unavailable(message): message
             }
         }
@@ -23,6 +70,9 @@ final class VoiceWakeWordMonitor: ObservableObject {
 
     static let shared = VoiceWakeWordMonitor()
     @Published private(set) var state: State = .off
+    /// Isolated wake-event stream. Fires once per detected "hey nativ".
+    let wakeDetected = PassthroughSubject<Void, Never>()
+    /// Convenience for the current single consumer; prefer `wakeDetected` for new work.
     var onWake: (() -> Void)?
 
     private struct Configuration: Equatable {
@@ -35,10 +85,15 @@ final class VoiceWakeWordMonitor: ObservableObject {
     private let inputSession = AudioInputEngineSession()
     private var sessionID = UUID()
     private var task: Task<Void, Never>?
-    private var resultsTask: Task<Void, Never>?
-    private var renewalTask: Task<Void, Never>?
-    private var analyzer: SpeechAnalyzer?
-    private var continuation: AsyncStream<AnalyzerInput>.Continuation?
+    private var consumerTask: Task<Void, Never>?
+    private var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
+
+    private static let targetFormat = AVAudioFormat(
+        commonFormat: .pcmFormatFloat32,
+        sampleRate: CoreMLWakeWordDetector.sampleRate,
+        channels: 1,
+        interleaved: false
+    )!
 
     func configure(enabled: Bool, suspended: Bool, deviceID: String?) {
         let next = Configuration(enabled: enabled, suspended: suspended, deviceID: deviceID)
@@ -51,13 +106,13 @@ final class VoiceWakeWordMonitor: ObservableObject {
         stopSession()
         guard configuration.enabled else { state = .off; return }
         guard !configuration.suspended else { state = .paused; return }
+        guard WakeWordModelLocator.modelURL() != nil else { state = .needsModel; return }
         state = .preparing
         let id = sessionID
         let deviceID = configuration.deviceID
         task = Task { [weak self] in
             // Let the previous recording's feedback finish before rearming the mic.
-            do { try await Task.sleep(for: .milliseconds(750)) }
-            catch { return }
+            do { try await Task.sleep(for: .milliseconds(750)) } catch { return }
             await self?.listen(id: id, deviceID: deviceID)
         }
     }
@@ -70,103 +125,50 @@ final class VoiceWakeWordMonitor: ObservableObject {
                 fail("Allow microphone access in System Settings, then try again.", id: id, retry: false)
                 return
             }
-            // The fixed English phrase works independently of the dictation language.
-            guard SpeechTranscriber.isAvailable,
-                  let locale = await SpeechTranscriber.supportedLocale(
-                    equivalentTo: Locale(identifier: "en-US")
-                  )
-            else {
-                fail("The on-device English speech recognizer is unavailable.", id: id, retry: false)
+            guard let modelURL = WakeWordModelLocator.modelURL() else {
+                if isCurrent(id) { state = .needsModel }
                 return
             }
-            guard isCurrent(id) else { return }
-            let transcriber = SpeechTranscriber(
-                locale: locale,
-                transcriptionOptions: [],
-                reportingOptions: [.volatileResults, .fastResults],
-                attributeOptions: []
-            )
-            if await AssetInventory.status(forModules: [transcriber]) != .installed {
-                _ = try? await AssetInventory.reserve(locale: locale)
-                guard isCurrent(id) else { return }
-                if let installation = try await AssetInventory.assetInstallationRequest(
-                    supporting: [transcriber]
-                ) {
-                    try await installation.downloadAndInstall()
-                }
-            }
-            guard isCurrent(id) else { return }
-            guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(
-                compatibleWith: [transcriber]
-            ) else { throw VoiceAudioRecorderError.couldNotConvert }
+            let detector = try await CoreMLWakeWordDetector(modelURL: modelURL)
             guard isCurrent(id) else { return }
 
-            let analyzer = SpeechAnalyzer(
-                modules: [transcriber],
-                options: .init(priority: .utility, modelRetention: .whileInUse)
-            )
-            self.analyzer = analyzer
-            let context = AnalysisContext()
-            context.contextualStrings[.general] = ["hey nativ", "hey native"]
-            try await analyzer.setContext(context)
-            try await analyzer.prepareToAnalyze(in: format)
-            guard isCurrent(id) else { return }
-
-            let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream(
+            let (stream, continuation) = AsyncStream<AVAudioPCMBuffer>.makeStream(
                 bufferingPolicy: .bufferingNewest(32)
             )
             self.continuation = continuation
-            let bridge = VoiceWakeWordAudioBridge(format: format, continuation: continuation) {
+            let bridge = WakeWordAudioBridge(format: Self.targetFormat, continuation: continuation) {
                 [weak self] in
                 Task { @MainActor [weak self] in
                     self?.fail("Could not read microphone audio. Retrying…", id: id)
                 }
             }
-            resultsTask = Task { [weak self] in
-                var detector = VoiceWakeWordDetection()
-                do {
-                    for try await result in transcriber.results {
-                        guard let self, self.isCurrent(id) else { return }
-                        if detector.consume(
-                            String(result.text.characters),
-                            start: result.range.start.seconds,
-                            end: result.range.end.seconds,
-                            isFinal: result.isFinal
-                        ) {
+            consumerTask = Task { [weak self] in
+                for await buffer in stream {
+                    if Task.isCancelled { return }
+                    if detector.process(buffer) {
+                        await MainActor.run { [weak self] in
+                            guard let self, self.isCurrent(id) else { return }
                             self.stopSession()
                             self.state = .paused
+                            self.wakeDetected.send()
                             self.onWake?()
-                            return
                         }
+                        return
                     }
-                    self?.fail("Wake-word recognition stopped. Retrying…", id: id)
-                } catch {
-                    self?.fail("Wake-word recognition was interrupted. Retrying…", id: id)
                 }
             }
             try inputSession.start(deviceUniqueID: deviceID, tap: { buffer, _ in
                 bridge.append(buffer)
             }) { [weak self] error in
-                self?.fail(error.localizedDescription, id: id)
+                Task { @MainActor [weak self] in self?.fail(error.localizedDescription, id: id) }
             }
             state = .listening
-            // Bound the recognizer's session history during all-day listening.
-            renewalTask = Task { [weak self] in
-                do { try await Task.sleep(for: .seconds(300)) }
-                catch { return }
-                guard let self, self.isCurrent(id) else { return }
-                self.restart()
-            }
-            _ = try await analyzer.analyzeSequence(stream)
-            fail("Wake-word recognition stopped. Retrying…", id: id)
         } catch {
             fail("Wake word is unavailable: \(error.localizedDescription)", id: id)
         }
     }
 
-    private func isCurrent(_ id: UUID) -> Bool {
-        id == sessionID && !Task.isCancelled
-    }
+    private func isCurrent(_ id: UUID) -> Bool { id == sessionID && !Task.isCancelled }
 
     private func fail(_ message: String, id: UUID, retry: Bool = true) {
         guard isCurrent(id) else { return }
@@ -175,8 +177,7 @@ final class VoiceWakeWordMonitor: ObservableObject {
         guard retry else { return }
         let retryID = sessionID
         task = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(30)) }
-            catch { return }
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
             guard let self, self.isCurrent(retryID) else { return }
             self.restart()
         }
@@ -187,33 +188,25 @@ final class VoiceWakeWordMonitor: ObservableObject {
         inputSession.stop()
         continuation?.finish()
         continuation = nil
-        task?.cancel()
-        task = nil
-        resultsTask?.cancel()
-        resultsTask = nil
-        renewalTask?.cancel()
-        renewalTask = nil
-        if let analyzer {
-            Task { await analyzer.cancelAndFinishNow() }
-        }
-        analyzer = nil
+        task?.cancel(); task = nil
+        consumerTask?.cancel(); consumerTask = nil
     }
 }
 
-/// Converts and owns each buffer before the audio callback returns. The converter is
-/// protected across engine restarts; the bounded stream cannot accumulate ambient audio.
-final class VoiceWakeWordAudioBridge: @unchecked Sendable {
+/// Converts and owns each microphone buffer (to 16 kHz mono) before the audio callback
+/// returns. The bounded stream cannot accumulate ambient audio across restarts.
+final class WakeWordAudioBridge: @unchecked Sendable {
     private let lock = NSLock()
     private let format: AVAudioFormat
-    private let continuation: AsyncStream<AnalyzerInput>.Continuation
+    private let continuation: AsyncStream<AVAudioPCMBuffer>.Continuation
     private let onFailure: @Sendable () -> Void
     private var converter: AVAudioConverter?
-    private var pendingBuffer: AVAudioPCMBuffer?
+    private var pending: AVAudioPCMBuffer?
     private var failed = false
 
     init(
         format: AVAudioFormat,
-        continuation: AsyncStream<AnalyzerInput>.Continuation,
+        continuation: AsyncStream<AVAudioPCMBuffer>.Continuation,
         onFailure: @escaping @Sendable () -> Void
     ) {
         self.format = format
@@ -230,15 +223,15 @@ final class VoiceWakeWordAudioBridge: @unchecked Sendable {
                     converter?.downmix = true
                 }
                 guard let converter else { throw VoiceAudioRecorderError.couldNotConvert }
-                pendingBuffer = buffer
-                defer { pendingBuffer = nil }
+                pending = buffer
+                defer { pending = nil }
                 while true {
                     guard let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 4_096)
                     else { throw VoiceAudioRecorderError.couldNotConvert }
                     var error: NSError?
                     let status = converter.convert(to: output, error: &error) { [self] _, status in
-                        if let buffer = pendingBuffer {
-                            pendingBuffer = nil
+                        if let buffer = pending {
+                            pending = nil
                             status.pointee = .haveData
                             return buffer
                         }
@@ -246,9 +239,7 @@ final class VoiceWakeWordAudioBridge: @unchecked Sendable {
                         return nil
                     }
                     if status == .error { throw VoiceAudioRecorderError.couldNotConvert }
-                    if output.frameLength > 0 {
-                        continuation.yield(AnalyzerInput(buffer: output))
-                    }
+                    if output.frameLength > 0 { continuation.yield(output) }
                     if status != .haveData { break }
                 }
                 return false
