@@ -23,7 +23,9 @@ final class CoreMLWakeWordDetector {
 
     init(modelURL: URL, threshold: Double = 0.85) async throws {
         self.threshold = threshold
-        let compiled = try await MLModel.compileModel(at: modelURL)
+        let staged = try Self.dereferencedCopy(of: modelURL)
+        defer { try? FileManager.default.removeItem(at: staged.deletingLastPathComponent()) }
+        let compiled = try await MLModel.compileModel(at: staged)
         let configuration = MLModelConfiguration()
         configuration.computeUnits = .cpuAndNeuralEngine
         model = try MLModel(contentsOf: compiled, configuration: configuration)
@@ -35,6 +37,26 @@ final class CoreMLWakeWordDetector {
     func reset() {
         ring.removeAll(keepingCapacity: true)
         sinceEval = 0
+    }
+
+    /// Hugging Face cache files are symlinks to content-addressed blobs; Core ML's
+    /// compiler cannot compile through them, so stage a symlink-dereferenced copy.
+    private static func dereferencedCopy(of url: URL) throws -> URL {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory
+            .appendingPathComponent("heynativ-model-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appendingPathComponent(url.lastPathComponent)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/cp")
+        process.arguments = ["-RL", url.path, destination.path]
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            throw NSError(domain: "CoreMLWakeWordDetector", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not stage the model for compilation."])
+        }
+        return destination
     }
 
     /// Appends one buffer of 16 kHz mono audio and returns true if "hey nativ" is heard.

@@ -34,10 +34,15 @@ enum WakeWordModelLocator {
         }
         guard let snapshot else { return nil }
         let package = snapshot.appendingPathComponent(packageName)
-        // A resolvable Manifest.json means the checkpoint download finished.
-        guard fm.fileExists(atPath: package.appendingPathComponent("Manifest.json").path) else {
-            return nil
-        }
+        // Require the compiled model + weights, not just Manifest.json: the hub downloads
+        // small files first, so a partial checkpoint must not look ready (avoids compiling
+        // a package whose weight.bin has not arrived yet).
+        let weights = package.appendingPathComponent("Data/com.apple.CoreML/weights/weight.bin")
+        let weightsSize = (try? weights.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        guard fm.fileExists(atPath: package.appendingPathComponent("Manifest.json").path),
+              fm.fileExists(atPath: package.appendingPathComponent("Data/com.apple.CoreML/model.mlmodel").path),
+              weightsSize > 1024
+        else { return nil }
         return package
     }
 
@@ -86,6 +91,7 @@ final class VoiceWakeWordMonitor: ObservableObject {
     private var sessionID = UUID()
     private var task: Task<Void, Never>?
     private var consumerTask: Task<Void, Never>?
+    private var modelWaitTask: Task<Void, Never>?
     private var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
 
     private static let targetFormat = AVAudioFormat(
@@ -106,8 +112,13 @@ final class VoiceWakeWordMonitor: ObservableObject {
     func restart() {
         stopSession()
         guard configuration.enabled else { state = .off; return }
+        // Model presence takes priority: invite the download even while audio is busy.
+        guard WakeWordModelLocator.modelURL() != nil else {
+            state = .needsModel
+            waitForModel()
+            return
+        }
         guard !configuration.suspended else { state = .paused; return }
-        guard WakeWordModelLocator.modelURL() != nil else { state = .needsModel; return }
         state = .preparing
         let id = sessionID
         let deviceID = configuration.deviceID
@@ -169,6 +180,21 @@ final class VoiceWakeWordMonitor: ObservableObject {
         }
     }
 
+    /// Polls for the model while the panel shows "download needed" so listening arms
+    /// automatically once the Models-page checkpoint download finishes.
+    private func waitForModel() {
+        modelWaitTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard let self, !Task.isCancelled else { return }
+                if WakeWordModelLocator.modelURL() != nil {
+                    self.restart()
+                    return
+                }
+            }
+        }
+    }
+
     private func isCurrent(_ id: UUID) -> Bool { id == sessionID && !Task.isCancelled }
 
     private func fail(_ message: String, id: UUID, retry: Bool = true) {
@@ -191,6 +217,7 @@ final class VoiceWakeWordMonitor: ObservableObject {
         continuation = nil
         task?.cancel(); task = nil
         consumerTask?.cancel(); consumerTask = nil
+        modelWaitTask?.cancel(); modelWaitTask = nil
     }
 }
 
