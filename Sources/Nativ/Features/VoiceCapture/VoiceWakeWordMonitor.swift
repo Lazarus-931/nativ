@@ -97,7 +97,8 @@ final class VoiceWakeWordMonitor: ObservableObject {
 
     func configure(enabled: Bool, suspended: Bool, deviceID: String?) {
         let next = Configuration(enabled: enabled, suspended: suspended, deviceID: deviceID)
-        guard next != configuration else { return }
+        // Re-resolve when waiting on the model so listening arms once its download completes.
+        guard next != configuration || state == .needsModel else { return }
         configuration = next
         restart()
     }

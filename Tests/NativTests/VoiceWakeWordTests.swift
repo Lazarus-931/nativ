@@ -1,44 +1,8 @@
 import AVFoundation
 import Foundation
-import Speech
 import Testing
 
 struct VoiceWakeWordTests {
-    @Test func testPhraseMatchesWholeWordsAndCommonSpelling() {
-        for phrase in ["hey nativ", "Hey, Nativ!", "HEY NATIVE.", "Okay, hey nativ"] {
-            for isFinal in [false, true] {
-                var detector = VoiceWakeWordDetection()
-                #expect(detector.consume(phrase, start: 0, end: 1, isFinal: isFinal) == true)
-            }
-        }
-        for phrase in ["nativ", "hey", "hey naturally", "they nativ", "hey nativeborn", "hey my nativ"] {
-            var detector = VoiceWakeWordDetection()
-            #expect(detector.consume(phrase, start: 0, end: 1, isFinal: true) == false)
-        }
-    }
-
-    @Test func testPartialRevisionsDoNotAccumulateIntoAPhrase() {
-        var detector = VoiceWakeWordDetection()
-        #expect(detector.consume("hey", start: 0, end: 1, isFinal: false) == false)
-        #expect(detector.consume("native", start: 0, end: 1, isFinal: false) == false)
-        #expect(detector.consume("hey native", start: 0, end: 1, isFinal: false) == true)
-    }
-
-    @Test func testPhraseCanSpanAdjacentFinalizedSegments() {
-        var detector = VoiceWakeWordDetection()
-        #expect(detector.consume("hey", start: 0, end: 0.5, isFinal: true) == false)
-        #expect(detector.consume("nativ", start: 0.6, end: 1, isFinal: false) == true)
-    }
-
-    @Test func testUnrelatedSegmentsDoNotFormPhrase() {
-        var detector = VoiceWakeWordDetection()
-        #expect(detector.consume("hey", start: 0, end: 0.5, isFinal: true) == false)
-        #expect(detector.consume("nativ", start: 4, end: 5, isFinal: true) == false)
-        #expect(detector.consume("hey", start: 5, end: 6, isFinal: true) == false)
-        #expect(detector.consume("there", start: 6, end: 7, isFinal: true) == false)
-        #expect(detector.consume("nativ", start: 7, end: 8, isFinal: true) == false)
-    }
-
     @Test func testSilenceFinishesOnlyAfterSpeechAndResetsWhenSpeakingResumes() {
         var endpoint = VoiceWakeWordEndpoint()
         #expect(endpoint.update(level: 0, elapsed: 2) == nil)
@@ -62,12 +26,29 @@ struct VoiceWakeWordTests {
         #expect(endpoint.update(level: 0.4, elapsed: 120) == .finish)
     }
 
+    @Test func testFeatureExtractorProducesNormalizedFiniteMels() {
+        let extractor = WakeWordFeatureExtractor()
+        var tone = [Float](repeating: 0, count: 32_000)
+        for i in 0..<tone.count { tone[i] = 0.2 * sin(2 * .pi * 440 * Float(i) / 16_000) }
+        var out = [Float](repeating: .nan, count: 128 * 200)
+        out.withUnsafeMutableBufferPointer { extractor.logMels(tone, into: $0.baseAddress!) }
+        #expect(out.allSatisfy { $0.isFinite })
+        // Per-mel-bin normalization keeps the overall level near zero.
+        let mean = out.reduce(0, +) / Float(out.count)
+        #expect(abs(mean) < 0.5)
+        // Silence stays finite and bounded (constant bins normalize near zero, up to the
+        // 1e-5 epsilon amplifying float rounding — matching the Python training frontend).
+        let silence = [Float](repeating: 0, count: 32_000)
+        out.withUnsafeMutableBufferPointer { extractor.logMels(silence, into: $0.baseAddress!) }
+        #expect(out.allSatisfy { $0.isFinite && abs($0) < 5 })
+    }
+
     @Test func testAudioBridgeConvertsAndOwnsBuffersAcrossDeviceChanges() async throws {
         let outputFormat = try #require(AVAudioFormat(
             standardFormatWithSampleRate: 16_000, channels: 1
         ))
-        let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
-        let bridge = VoiceWakeWordAudioBridge(format: outputFormat, continuation: continuation) {
+        let (stream, continuation) = AsyncStream<AVAudioPCMBuffer>.makeStream()
+        let bridge = WakeWordAudioBridge(format: outputFormat, continuation: continuation) {
             Issue.record("Audio conversion failed")
         }
         for rate in [48_000.0, 44_100, 16_000] {
@@ -85,11 +66,11 @@ struct VoiceWakeWordTests {
         }
         continuation.finish()
         var count = 0
-        for await input in stream {
-            #expect(input.buffer.format == outputFormat)
-            #expect(input.buffer.frameLength > 0)
-            let middle = Int(input.buffer.frameLength / 2)
-            #expect(abs(input.buffer.floatChannelData![0][middle] - 0.25) <= 0.01)
+        for await buffer in stream {
+            #expect(buffer.format == outputFormat)
+            #expect(buffer.frameLength > 0)
+            let middle = Int(buffer.frameLength / 2)
+            #expect(abs(buffer.floatChannelData![0][middle] - 0.25) <= 0.01)
             count += 1
         }
         #expect(count >= 3)
@@ -129,10 +110,9 @@ struct VoiceWakeWordPreferencesTests {
         #expect(!preferences.isHandsFreeEnabled)
     }
 
-    @Test func testDisablingOrSuspendingCancelsPendingListenerStartup() async throws {
+    @Test func testSuspendingOrDisablingSettlesToPausedThenOff() async throws {
         let monitor = VoiceWakeWordMonitor()
-        monitor.configure(enabled: true, suspended: false, deviceID: nil)
-        #expect(monitor.state == .preparing)
+        // Suspension is evaluated before the model check, so it is model-independent.
         monitor.configure(enabled: true, suspended: true, deviceID: nil)
         #expect(monitor.state == .paused)
         monitor.configure(enabled: false, suspended: false, deviceID: nil)

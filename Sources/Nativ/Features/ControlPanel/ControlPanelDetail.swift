@@ -163,6 +163,9 @@ extension ControlPanelView {
                 titleLeadingInset: 0,
                 openSpeechModels: {
                     navigation.openSpeechModelDiscovery()
+                },
+                openWakeWordModel: {
+                    navigation.openModelDiscovery(repoID: WakeWordModelLocator.repoID)
                 }
             )
         ) {

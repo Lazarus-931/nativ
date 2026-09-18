@@ -168,6 +168,7 @@ struct AudioView: View {
 
     let titleLeadingInset: CGFloat
     let onOpenSpeechModels: () -> Void
+    let onOpenWakeWordModel: () -> Void
 
     init(
         model: NativModel,
@@ -177,12 +178,14 @@ struct AudioView: View {
         animations: VoiceAnimationPreferences? = nil,
         sounds: VoiceSoundPreferences? = nil,
         titleLeadingInset: CGFloat = 0,
-        onOpenSpeechModels: @escaping () -> Void
+        onOpenSpeechModels: @escaping () -> Void,
+        onOpenWakeWordModel: @escaping () -> Void = {}
     ) {
         self.model = model
         _captureLibrary = ObservedObject(wrappedValue: captureLibrary)
         self.titleLeadingInset = titleLeadingInset
         self.onOpenSpeechModels = onOpenSpeechModels
+        self.onOpenWakeWordModel = onOpenWakeWordModel
         _analytics = ObservedObject(wrappedValue: analytics ?? .shared)
         _shortcuts = ObservedObject(wrappedValue: shortcuts ?? .shared)
         _animations = ObservedObject(wrappedValue: animations ?? .shared)
@@ -2444,7 +2447,7 @@ struct AudioView: View {
             Text("Wait for the recording indicator, then speak. Pause for two seconds to transcribe, or use your dictation shortcut to finish.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("Keeps your selected microphone active while Nativ is running. Wake-word recognition stays on this Mac; background audio is never saved. macOS may download an English speech model the first time.")
+            Text("Keeps your selected microphone active while Nativ is running. Wake-word detection runs entirely on this Mac with the on-device Hey Nativ model; background audio is never saved.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if shortcuts.isWakeWordEnabled {
@@ -2452,9 +2455,15 @@ struct AudioView: View {
                     Text(wakeWordMonitor.state.description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    if case .unavailable = wakeWordMonitor.state {
+                    switch wakeWordMonitor.state {
+                    case .needsModel:
+                        Button("Get Model") { onOpenWakeWordModel() }
+                            .controlSize(.small)
+                    case .unavailable:
                         Button("Try Again") { wakeWordMonitor.restart() }
                             .controlSize(.small)
+                    default:
+                        EmptyView()
                     }
                 }
             }

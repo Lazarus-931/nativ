@@ -69,7 +69,8 @@ final class VoiceDictationExtension: NativHostExtension {
                 model: context.model,
                 captureLibrary: audioCaptureLibrary,
                 titleLeadingInset: context.titleLeadingInset,
-                onOpenSpeechModels: context.openSpeechModels
+                onOpenSpeechModels: context.openSpeechModels,
+                onOpenWakeWordModel: context.openWakeWordModel
             )
         )
     }

@@ -30,6 +30,7 @@ struct NativExtensionPageContext {
     let model: NativModel
     let titleLeadingInset: CGFloat
     let openSpeechModels: () -> Void
+    let openWakeWordModel: () -> Void
 }
 
 struct NativExtensionHostContext {

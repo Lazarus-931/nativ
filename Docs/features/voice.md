@@ -38,16 +38,19 @@ before recording starts, so it is not included in the transcript. Wake-started r
 cancel after ten seconds without speech and finish after at most two minutes.
 
 The setting is off by default and independent of the keyboard's hands-free mode. When enabled,
-it keeps the selected microphone active while the Audio extension is running. Wake recognition
-uses macOS's on-device English speech model (which may download on first use), independently
-of the selected dictation language or local server. Background audio stays in memory and is
-never saved. The recognizer also accepts the equivalent spoken spelling “hey native”.
+it keeps the selected microphone active while the Audio extension is running. Wake detection
+uses a compact on-device **Hey Nativ** Core ML model that scores a rolling two-second window of
+audio directly on the Apple Neural Engine — no transcription and no network. The model is a
+one-time download; if it isn't present, the panel shows **Get Model** and links to that model in
+[Models](models.md). Listening arms automatically once the download finishes. Background audio
+stays in memory and is never saved.
 
 Listening pauses during dictation and transcription, meeting/voice-note capture, audio-library
 playback, and system sleep or an inactive login session. Pausing playback resumes wake-word
 listening; resuming playback pauses it again. Listening resumes automatically after other audio activity.
 Turning the setting off or disabling the Audio extension stops listening. The settings panel
-shows preparation, listening, and error status with **Try Again** for recovery.
+shows preparation, listening, download-needed, and error status, with **Get Model** to fetch the
+model and **Try Again** for recovery.
 
 ### Keyboard shortcuts
 
