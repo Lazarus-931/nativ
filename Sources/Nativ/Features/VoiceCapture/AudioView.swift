@@ -2430,35 +2430,50 @@ struct AudioView: View {
     }
 
     private var wakeWordConfigurationPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Label("Hey Nativ", systemImage: "waveform.badge.mic")
                         .font(.headline)
-                    Text("Start dictation by saying “hey nativ”.")
+                    Text("Trigger Nativ hands-free by saying “hey nativ”.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
                 Spacer(minLength: 16)
-                Toggle("Listen for hey nativ", isOn: $shortcuts.isWakeWordEnabled)
+
+                Toggle("Hey Nativ", isOn: $shortcuts.isWakeWordEnabled)
                     .labelsHidden()
                     .toggleStyle(.switch)
             }
-            Text("Wait for the recording indicator, then speak. Pause for two seconds to transcribe, or use your dictation shortcut to finish.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("Keeps your selected microphone active while Nativ is running. Wake-word detection runs entirely on this Mac with the on-device Hey Nativ model; background audio is never saved.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if shortcuts.isWakeWordEnabled {
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("On wake")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Picker("On wake", selection: $shortcuts.wakeAction) {
                     ForEach(VoiceShortcutPreferences.WakeAction.allCases, id: \.self) { action in
                         Text(action.displayName).tag(action)
                     }
                 }
+                .labelsHidden()
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 360)
-                HStack {
+                .frame(maxWidth: 380)
+            }
+            .disabled(!shortcuts.isWakeWordEnabled)
+
+            Text(wakeActionDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Keeps your selected microphone active while Nativ is running. Detection runs entirely on this Mac with the on-device Hey Nativ model; background audio is never saved.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if shortcuts.isWakeWordEnabled {
+                HStack(spacing: 10) {
                     Text(wakeWordMonitor.state.description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -2475,9 +2490,17 @@ struct AudioView: View {
                 }
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
         .padding(18)
         .audioPanelStyle()
+    }
+
+    private var wakeActionDescription: String {
+        switch shortcuts.wakeAction {
+        case .dictate:
+            "Wait for the recording indicator, then speak. Pause briefly to insert the transcript at your cursor, or use your dictation shortcut to finish."
+        case .ask:
+            "Wait for the recording indicator, then speak your question. Pause briefly to open a new chat with your selected model and send it — the reply streams there."
+        }
     }
 
     private var spokenReturnConfigurationPanel: some View {

@@ -19,23 +19,33 @@ extension ControlPanelView {
         guard let prompt = navigation.consumePendingAskPrompt(),
               !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return }
+        NSLog("[WW] ask: begin isRunning=\(model.isRunning)")
         createChatSession(projectID: activeProjectContextID)
         chat.composerText = prompt
         let model = model
         let chat = chat
         Task { @MainActor in
             if !model.isRunning {
+                NSLog("[WW] ask: startServer()")
                 model.startServer()
             }
-            for _ in 0..<120 where !(model.isRunning && !model.isModelLoading) {
+            var waited = 0
+            while waited < 600, !(model.isRunning && !model.isModelLoading) {
                 try? await Task.sleep(nanoseconds: 500_000_000)
+                waited += 1
             }
-            guard model.isRunning, !model.isModelLoading else { return }
+            let modelID = model.settings.normalized().languageModelID
+            NSLog("[WW] ask: ready isRunning=\(model.isRunning) loading=\(model.isModelLoading) canSend=\(chat.canSend(isRunning: model.isRunning, selectedModelID: modelID))")
+            guard model.isRunning, !model.isModelLoading else {
+                NSLog("[WW] ask: not ready, aborting")
+                return
+            }
             chat.send(
                 using: model,
                 languageModelSupportsTools: false,
                 languageModelSupportsVision: false
             )
+            NSLog("[WW] ask: send() called")
         }
     }
 
