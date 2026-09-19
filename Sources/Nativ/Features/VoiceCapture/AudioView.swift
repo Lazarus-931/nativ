@@ -2447,32 +2447,31 @@ struct AudioView: View {
                     .toggleStyle(.switch)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("On wake")
+            if shortcuts.isWakeWordEnabled {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("On wake")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("On wake", selection: $shortcuts.wakeAction) {
+                        ForEach(VoiceShortcutPreferences.WakeAction.allCases, id: \.self) { action in
+                            Text(action.displayName).tag(action)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 380)
+                }
+
+                Text(wakeActionDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Picker("On wake", selection: $shortcuts.wakeAction) {
-                    ForEach(VoiceShortcutPreferences.WakeAction.allCases, id: \.self) { action in
-                        Text(action.displayName).tag(action)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 380)
-            }
-            .disabled(!shortcuts.isWakeWordEnabled)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Text(wakeActionDescription)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                Text("Keeps your selected microphone active while Nativ is running. Detection runs entirely on this Mac with the on-device Hey Nativ model; background audio is never saved.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Text("Keeps your selected microphone active while Nativ is running. Detection runs entirely on this Mac with the on-device Hey Nativ model; background audio is never saved.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if shortcuts.isWakeWordEnabled {
                 HStack(spacing: 10) {
                     Text(wakeWordMonitor.state.description)
                         .font(.caption)
@@ -2490,6 +2489,7 @@ struct AudioView: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: shortcuts.isWakeWordEnabled)
         .padding(18)
         .audioPanelStyle()
     }
