@@ -165,16 +165,9 @@ extension ControlPanelView {
                     navigation.openSpeechModelDiscovery()
                 },
                 openWakeWordModel: {
-                    downloads.download(
-                        repoID: WakeWordModelLocator.repoID,
-                        sizeBytes: WakeWordModelLocator.sizeBytes,
-                        cachePath: chromeState.artifactSettings.modelSearchPath,
-                        volumeIdentifier: chromeState.artifactSettings.modelCacheVolumeIdentifier,
-                        token: model.effectiveHuggingFaceToken
-                    ) {
-                        NotificationCenter.default.post(name: .localModelLibraryDidChange, object: nil)
-                    }
-                    navigation.open(.models)
+                    // Route to the Models page with the wake model searched; the user
+                    // starts the download themselves.
+                    navigation.openModelDiscovery(repoID: WakeWordModelLocator.repoID)
                 }
             )
         ) {

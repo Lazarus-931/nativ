@@ -7,10 +7,10 @@ struct VoiceWakeWordTests {
         var endpoint = VoiceWakeWordEndpoint()
         #expect(endpoint.update(level: 0, elapsed: 2) == nil)
         #expect(endpoint.update(level: 0.4, elapsed: 3) == nil)
-        #expect(endpoint.update(level: 0, elapsed: 4.9) == nil)
+        #expect(endpoint.update(level: 0, elapsed: 4.4) == nil)
         #expect(endpoint.update(level: 0.4, elapsed: 5) == nil)
-        #expect(endpoint.update(level: 0, elapsed: 6.9) == nil)
-        #expect(endpoint.update(level: 0, elapsed: 7) == .finish)
+        #expect(endpoint.update(level: 0, elapsed: 6.4) == nil)
+        #expect(endpoint.update(level: 0, elapsed: 6.5) == .finish)
     }
 
     @Test func testEmptyCaptureCancelsAndIgnoresStartChime() {

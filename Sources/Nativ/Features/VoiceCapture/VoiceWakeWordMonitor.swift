@@ -37,8 +37,11 @@ enum WakeWordModelLocator {
         // Require the compiled model + weights, not just Manifest.json: the hub downloads
         // small files first, so a partial checkpoint must not look ready (avoids compiling
         // a package whose weight.bin has not arrived yet).
+        // Resolve the Hugging Face cache symlink so we measure the real blob, not the
+        // ~88-byte symlink (URL.fileSizeKey reports the link's own size).
         let weights = package.appendingPathComponent("Data/com.apple.CoreML/weights/weight.bin")
-        let weightsSize = (try? weights.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            .resolvingSymlinksInPath()
+        let weightsSize = ((try? fm.attributesOfItem(atPath: weights.path))?[.size] as? Int) ?? 0
         guard fm.fileExists(atPath: package.appendingPathComponent("Manifest.json").path),
               fm.fileExists(atPath: package.appendingPathComponent("Data/com.apple.CoreML/model.mlmodel").path),
               weightsSize > 1024
@@ -123,11 +126,14 @@ final class VoiceWakeWordMonitor: ObservableObject {
 
     func restart() {
         stopSession()
-        guard configuration.enabled else { state = .off; return }
+        guard configuration.enabled else { state = .off; NSLog("[WW] restart: off"); return }
         // Model presence takes priority: invite the download even while audio is busy.
-        guard WakeWordModelLocator.modelURL() != nil else { state = .needsModel; return }
-        guard !configuration.suspended else { state = .paused; return }
+        guard let modelURL = WakeWordModelLocator.modelURL() else {
+            state = .needsModel; NSLog("[WW] restart: needsModel (model not resolved)"); return
+        }
+        guard !configuration.suspended else { state = .paused; NSLog("[WW] restart: paused (suspended)"); return }
         state = .preparing
+        NSLog("[WW] restart: preparing, model=\(modelURL.path)")
         let id = sessionID
         let deviceID = configuration.deviceID
         task = Task { [weak self] in
@@ -168,6 +174,7 @@ final class VoiceWakeWordMonitor: ObservableObject {
                     if detector.process(buffer) {
                         await MainActor.run { [weak self] in
                             guard let self, self.isCurrent(id) else { return }
+                            NSLog("[WW] WAKE detected, onWake set=\(self.onWake != nil)")
                             self.stopSession()
                             self.state = .paused
                             self.wakeDetected.send()
@@ -183,7 +190,9 @@ final class VoiceWakeWordMonitor: ObservableObject {
                 Task { @MainActor [weak self] in self?.fail(error.localizedDescription, id: id) }
             }
             state = .listening
+            NSLog("[WW] LISTENING")
         } catch {
+            NSLog("[WW] listen error: \(error.localizedDescription)")
             fail("Wake word is unavailable: \(error.localizedDescription)", id: id)
         }
     }
