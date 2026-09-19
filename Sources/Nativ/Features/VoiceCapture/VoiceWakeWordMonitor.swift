@@ -4,9 +4,9 @@ import Foundation
 
 /// Locates the downloaded "Hey Nativ" Core ML model in the Hugging Face hub cache.
 enum WakeWordModelLocator {
-    // TODO: point at the Nativ HF org repo once published.
-    static let repoID = "AlazarM/MM"
+    static let repoID = "nativ-community/HN"
     static let packageName = "hey-native-mm-fp16.mlpackage"
+    static let sizeBytes: Int64 = 4_000_000
 
     static func modelURL(
         environment: [String: String] = ProcessInfo.processInfo.environment
@@ -91,8 +91,20 @@ final class VoiceWakeWordMonitor: ObservableObject {
     private var sessionID = UUID()
     private var task: Task<Void, Never>?
     private var consumerTask: Task<Void, Never>?
-    private var modelWaitTask: Task<Void, Never>?
     private var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        // Arm automatically once the model download completes (the local model library
+        // posts this after a Models-page download finishes).
+        NotificationCenter.default.publisher(for: .localModelLibraryDidChange)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self, self.state == .needsModel else { return }
+                self.restart()
+            }
+            .store(in: &cancellables)
+    }
 
     private static let targetFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32,
@@ -113,11 +125,7 @@ final class VoiceWakeWordMonitor: ObservableObject {
         stopSession()
         guard configuration.enabled else { state = .off; return }
         // Model presence takes priority: invite the download even while audio is busy.
-        guard WakeWordModelLocator.modelURL() != nil else {
-            state = .needsModel
-            waitForModel()
-            return
-        }
+        guard WakeWordModelLocator.modelURL() != nil else { state = .needsModel; return }
         guard !configuration.suspended else { state = .paused; return }
         state = .preparing
         let id = sessionID
@@ -180,21 +188,6 @@ final class VoiceWakeWordMonitor: ObservableObject {
         }
     }
 
-    /// Polls for the model while the panel shows "download needed" so listening arms
-    /// automatically once the Models-page checkpoint download finishes.
-    private func waitForModel() {
-        modelWaitTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
-                guard let self, !Task.isCancelled else { return }
-                if WakeWordModelLocator.modelURL() != nil {
-                    self.restart()
-                    return
-                }
-            }
-        }
-    }
-
     private func isCurrent(_ id: UUID) -> Bool { id == sessionID && !Task.isCancelled }
 
     private func fail(_ message: String, id: UUID, retry: Bool = true) {
@@ -217,7 +210,6 @@ final class VoiceWakeWordMonitor: ObservableObject {
         continuation = nil
         task?.cancel(); task = nil
         consumerTask?.cancel(); consumerTask = nil
-        modelWaitTask?.cancel(); modelWaitTask = nil
     }
 }
 

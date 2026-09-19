@@ -1021,6 +1021,14 @@ enum LocalModelDiscovery {
         let configURL = snapshotURL.appendingPathComponent("config.json")
         let tokenizerConfigURL = snapshotURL.appendingPathComponent("tokenizer_config.json")
         let modelIndexURL = snapshotURL.appendingPathComponent("model_index.json")
+        // A self-contained Core ML bundle (e.g. the Hey Nativ wake model) is a valid
+        // installed model even without a transformers config.json.
+        let snapshotContents = (try? fileManager.contentsOfDirectory(
+            at: snapshotURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        )) ?? []
+        if snapshotContents.contains(where: { $0.pathExtension == "mlpackage" }) {
+            return true
+        }
         guard fileManager.fileExists(atPath: configURL.path) || fileManager.fileExists(atPath: tokenizerConfigURL.path) || fileManager.fileExists(atPath: modelIndexURL.path)
         else {
             return false
