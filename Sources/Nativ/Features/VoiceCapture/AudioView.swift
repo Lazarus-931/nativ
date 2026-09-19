@@ -2448,44 +2448,53 @@ struct AudioView: View {
             }
 
             if shortcuts.isWakeWordEnabled {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("On wake")
+                switch wakeWordMonitor.state {
+                case .needsModel:
+                    // Step 1: the model must be downloaded before anything else.
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Download the on-device Hey Nativ model to start.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Get Model") { onOpenWakeWordModel() }
+                            .controlSize(.small)
+                    }
+                case .unavailable:
+                    HStack(spacing: 10) {
+                        Text(wakeWordMonitor.state.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Try Again") { wakeWordMonitor.restart() }
+                            .controlSize(.small)
+                    }
+                default:
+                    // Step 2 (model present): choose what a wake does.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("On wake")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Picker("On wake", selection: $shortcuts.wakeAction) {
+                            ForEach(VoiceShortcutPreferences.WakeAction.allCases, id: \.self) { action in
+                                Text(action.displayName).tag(action)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 380)
+                    }
+
+                    Text(wakeActionDescription)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Picker("On wake", selection: $shortcuts.wakeAction) {
-                        ForEach(VoiceShortcutPreferences.WakeAction.allCases, id: \.self) { action in
-                            Text(action.displayName).tag(action)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 380)
-                }
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text(wakeActionDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text("Runs entirely on this Mac; background audio is never saved.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text("Keeps your selected microphone active while Nativ is running. Detection runs entirely on this Mac with the on-device Hey Nativ model; background audio is never saved.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 10) {
                     Text(wakeWordMonitor.state.description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    switch wakeWordMonitor.state {
-                    case .needsModel:
-                        Button("Get Model") { onOpenWakeWordModel() }
-                            .controlSize(.small)
-                    case .unavailable:
-                        Button("Try Again") { wakeWordMonitor.restart() }
-                            .controlSize(.small)
-                    default:
-                        EmptyView()
-                    }
                 }
             }
         }
