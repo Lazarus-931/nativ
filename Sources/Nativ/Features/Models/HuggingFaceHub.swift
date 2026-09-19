@@ -140,7 +140,7 @@ enum HuggingFaceCapabilityFilter {
             return "feature-extraction"
         case .reranking:
             return "text-ranking"
-        case .reasoning, .tools, .drafter:
+        case .reasoning, .tools, .drafter, .wakeWord:
             return nil
         }
     }

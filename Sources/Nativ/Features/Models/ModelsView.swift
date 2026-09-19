@@ -1899,7 +1899,13 @@ private struct InstalledModelRow: View, @MainActor Equatable {
                                     color: .orange
                                 )
                             }
-                            if localModel.capabilities.contains(.imageEditing)
+                            if localModel.capabilities.contains(.wakeWord) {
+                                ModelPill(
+                                    title: "Wake word",
+                                    systemImage: "waveform.badge.mic",
+                                    color: .accentColor
+                                )
+                            } else if localModel.capabilities.contains(.imageEditing)
                                 && !localModel.capabilities.contains(.imageGeneration)
                             {
                                 ModelPill(
@@ -2081,7 +2087,14 @@ private struct InstalledModelRow: View, @MainActor Equatable {
 
     @ViewBuilder
     private var loadButton: some View {
-        if let preferredPreloadSlot {
+        if localModel.capabilities.contains(.wakeWord) {
+            Label("Ready", systemImage: "checkmark.circle.fill")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .frame(height: 30)
+                .fixedSize()
+        } else if let preferredPreloadSlot {
             let isLoaded = selectedPreloadSlots.contains(preferredPreloadSlot)
             Button {
                 guard !isSelectionDisabled else { return }
@@ -3289,6 +3302,8 @@ extension LocalModelCapability {
             URLQueryItem(name: "other", value: "tool-calling")
         case .drafter:
             URLQueryItem(name: "other", value: "draft-model")
+        case .wakeWord:
+            URLQueryItem(name: "other", value: "wake-word")
         }
     }
 
@@ -3307,6 +3322,7 @@ extension LocalModelCapability {
         case .reasoning: "brain.fill"
         case .tools: "hammer"
         case .drafter: "hare"
+        case .wakeWord: "waveform.badge.mic"
         }
     }
 }

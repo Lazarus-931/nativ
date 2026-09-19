@@ -165,6 +165,9 @@ private final class ModelMenuRowView: NSView {
             case .drafter:
                 symbolName = "hare.fill"
                 description = capability.displayName
+            case .wakeWord:
+                symbolName = "waveform.badge.mic"
+                description = capability.displayName
             }
             let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
             capabilityImage.image = NSImage(

@@ -40,6 +40,7 @@ enum LocalModelCapability: String, CaseIterable, Hashable, Sendable {
     case reasoning
     case tools
     case drafter
+    case wakeWord
 
     var displayName: String {
         switch self {
@@ -69,6 +70,8 @@ enum LocalModelCapability: String, CaseIterable, Hashable, Sendable {
             "Tool Calling"
         case .drafter:
             "Drafter"
+        case .wakeWord:
+            "Wake Word"
         }
     }
 }
@@ -1543,6 +1546,12 @@ enum LocalModelDiscovery {
         at snapshotURL: URL,
         fileManager: FileManager
     ) -> Set<LocalModelCapability> {
+        // A Core ML wake-word bundle has no transformers config; classify by its package.
+        if let contents = try? fileManager.contentsOfDirectory(
+            at: snapshotURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]),
+            contents.contains(where: { $0.pathExtension == "mlpackage" }) {
+            return [.wakeWord]
+        }
         let configURL = snapshotURL.appendingPathComponent("config.json")
         let config: [String: Any]
         if fileManager.fileExists(atPath: configURL.path),
