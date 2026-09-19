@@ -2451,6 +2451,13 @@ struct AudioView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if shortcuts.isWakeWordEnabled {
+                Picker("On wake", selection: $shortcuts.wakeAction) {
+                    ForEach(VoiceShortcutPreferences.WakeAction.allCases, id: \.self) { action in
+                        Text(action.displayName).tag(action)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 360)
                 HStack {
                     Text(wakeWordMonitor.state.description)
                         .font(.caption)

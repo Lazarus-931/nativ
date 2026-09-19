@@ -256,6 +256,9 @@ struct ControlPanelView: View {
         .onReceive(navigation.$newChatRequest) { _ in
             handleNewChatRequest()
         }
+        .onReceive(navigation.$askInNewChatRequest) { _ in
+            handleAskInNewChatRequest()
+        }
         .onReceive(navigation.$toggleSidebarRequest) { _ in
             handleToggleSidebarRequest()
         }

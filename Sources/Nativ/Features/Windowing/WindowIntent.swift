@@ -7,6 +7,7 @@ enum NativWindowIntent: Equatable {
     case openTab(ControlPanelTab)
     case openExtensionPage(String)
     case openSpeechModels
+    case askInNewChat(String)
     case toggleSidebar
     case collapseSidebarSections
 }
@@ -26,6 +27,8 @@ extension ControlPanelNavigation {
             openExtensionPage(pageID)
         case .openSpeechModels:
             openSpeechModelDiscovery()
+        case .askInNewChat(let prompt):
+            askInNewChat(prompt: prompt)
         case .toggleSidebar:
             toggleSidebar()
         case .collapseSidebarSections:

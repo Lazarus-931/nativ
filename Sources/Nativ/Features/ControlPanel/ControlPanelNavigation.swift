@@ -68,6 +68,8 @@ final class ControlPanelNavigation: ObservableObject {
         .imageGeneration
     @Published private(set) var modelDiscoveryRequest = 0
     @Published private(set) var modelDiscoveryRepositoryID: String?
+    @Published private(set) var askInNewChatRequest = 0
+    private(set) var pendingAskPrompt: String?
     @Published private(set) var drafterModelDiscoveryRequest = 0
     @Published private(set) var drafterModelDiscoveryTargetID: String?
     @Published private(set) var collapseAllSectionsRequest = 0
@@ -107,6 +109,18 @@ final class ControlPanelNavigation: ObservableObject {
         modelDiscoveryRepositoryID = repoID
         modelDiscoveryRequest += 1
         requestedTab = .models
+    }
+
+    /// Voice "Ask Nativ": open a fresh chat and send the spoken prompt.
+    func askInNewChat(prompt: String) {
+        pendingAskPrompt = prompt
+        askInNewChatRequest += 1
+        requestedTab = .chat
+    }
+
+    func consumePendingAskPrompt() -> String? {
+        defer { pendingAskPrompt = nil }
+        return pendingAskPrompt
     }
 
     func openDrafterModelDiscovery(for targetModelID: String) {

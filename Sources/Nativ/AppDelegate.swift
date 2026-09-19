@@ -83,6 +83,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @MainActor UNUserNotif
                 openSpeechModels: { [weak self] in
                     self?.performWindowIntent(.openSpeechModels)
                 },
+                askInNewChat: { [weak self] prompt in
+                    self?.performWindowIntent(.activate)
+                    self?.performWindowIntent(.askInNewChat(prompt))
+                },
                 showMainWindow: { [weak self] in
                     self?.performWindowIntent(.activate)
                 }

@@ -18,6 +18,8 @@ final class VoiceCaptureCoordinator {
     var transcriptionConfigurationProvider:
         (@MainActor @Sendable () -> VoiceTranscriptionConfiguration?)?
     var onOpenSpeechModels: (() -> Void)?
+    /// Sends a finished wake transcript to a fresh chat (the "Ask Nativ" wake action).
+    var onAskInNewChat: ((String) -> Void)?
 
     private let shortcutMonitor = FnControlShortcutMonitor()
     private let recorder = VoiceAudioRecorder()
@@ -37,6 +39,7 @@ final class VoiceCaptureCoordinator {
     private var activeOverlayTranscriptionID: UUID?
     private var isShortcutHeld = false
     private var isHandsFreeMode = false
+    private var pendingWakeAction: VoiceShortcutPreferences.WakeAction = .dictate
     private var isPresentingAlert = false {
         didSet { updateWakeWordListening() }
     }
@@ -74,6 +77,7 @@ final class VoiceCaptureCoordinator {
             guard let self, self.canListenForWakeWord else { return }
             self.isHandsFreeMode = true
             self.isShortcutHeld = true
+            self.pendingWakeAction = VoiceShortcutPreferences.shared.wakeAction
             self.wakeWordEndpoint = VoiceWakeWordEndpoint()
             self.beginCapture()
         }
@@ -207,6 +211,7 @@ final class VoiceCaptureCoordinator {
             isHandsFreeMode = true
         }
         isShortcutHeld = true
+        pendingWakeAction = .dictate
         beginCapture()
     }
 
@@ -360,6 +365,24 @@ final class VoiceCaptureCoordinator {
         audioDeletionTasks[standardizedURL] = task
     }
 
+    /// Routes a finished transcript to its destination: the cursor (dictation) or a
+    /// fresh chat ("Ask Nativ"). Returns whether it was inserted at the cursor.
+    private func deliverTranscript(
+        _ transcript: String,
+        target: VoiceTranscriptInsertionTarget?,
+        pressReturn: Bool
+    ) async -> Bool {
+        if pendingWakeAction == .ask, let onAskInNewChat {
+            onAskInNewChat(transcript)
+            return true
+        }
+        return await VoiceTranscriptInserter.insertAtCursor(
+            transcript,
+            target: target,
+            pressReturn: pressReturn
+        )
+    }
+
     private func transcribe(
         _ recordingURL: URL,
         target: VoiceTranscriptInsertionTarget?,
@@ -469,7 +492,7 @@ final class VoiceCaptureCoordinator {
                     applicationName: target?.applicationName
                 )
 
-                let insertedAtCursor = await VoiceTranscriptInserter.insertAtCursor(
+                let insertedAtCursor = await self.deliverTranscript(
                     transcript,
                     target: target,
                     pressReturn: dictation.pressReturn
@@ -582,7 +605,7 @@ final class VoiceCaptureCoordinator {
             applicationName: target?.applicationName
         )
 
-        let insertedAtCursor = await VoiceTranscriptInserter.insertAtCursor(
+        let insertedAtCursor = await self.deliverTranscript(
             dictation.text,
             target: target,
             pressReturn: dictation.pressReturn

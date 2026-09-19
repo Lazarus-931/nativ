@@ -13,6 +13,32 @@ extension ControlPanelView {
         createChatSession(projectID: activeProjectContextID)
     }
 
+    /// Voice "Ask Nativ": open a fresh chat, drop in the spoken prompt, start the
+    /// server if needed, and send once the model is ready.
+    func handleAskInNewChatRequest() {
+        guard let prompt = navigation.consumePendingAskPrompt(),
+              !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+        createChatSession(projectID: activeProjectContextID)
+        chat.composerText = prompt
+        let model = model
+        let chat = chat
+        Task { @MainActor in
+            if !model.isRunning {
+                model.startServer()
+            }
+            for _ in 0..<120 where !(model.isRunning && !model.isModelLoading) {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+            guard model.isRunning, !model.isModelLoading else { return }
+            chat.send(
+                using: model,
+                languageModelSupportsTools: false,
+                languageModelSupportsVision: false
+            )
+        }
+    }
+
     func handleToggleSidebarRequest() {
         guard navigation.consumeToggleSidebarRequest() else {
             return

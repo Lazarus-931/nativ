@@ -153,6 +153,23 @@ final class VoiceShortcutPreferences: ObservableObject {
     @Published var isWakeWordEnabled: Bool {
         didSet { persistCurrent() }
     }
+    @Published var wakeAction: WakeAction {
+        didSet { persistCurrent() }
+    }
+
+    /// What "hey nativ" does after it captures speech.
+    enum WakeAction: String, Codable, CaseIterable, Sendable {
+        case dictate
+        case ask
+
+        var displayName: String {
+            switch self {
+            case .dictate: "Dictate to cursor"
+            case .ask: "Ask Nativ (new chat)"
+            }
+        }
+    }
+
     // Spoken command edits do not require re-registering global keyboard shortcuts.
     @Published var isReturnCommandEnabled: Bool {
         didSet { persistCurrent() }
@@ -171,6 +188,7 @@ final class VoiceShortcutPreferences: ObservableObject {
         let retryShortcut: VoiceShortcut
         let isHandsFreeEnabled: Bool?
         let isWakeWordEnabled: Bool?
+        let wakeAction: String?
         let isReturnCommandEnabled: Bool?
         let returnCommandTrigger: String?
     }
@@ -193,6 +211,7 @@ final class VoiceShortcutPreferences: ObservableObject {
             retryShortcut = payload.retryShortcut
             isHandsFreeEnabled = payload.isHandsFreeEnabled ?? true
             isWakeWordEnabled = payload.isWakeWordEnabled ?? false
+            wakeAction = payload.wakeAction.flatMap(WakeAction.init(rawValue:)) ?? .dictate
             isReturnCommandEnabled = payload.isReturnCommandEnabled ?? true
             returnCommandTrigger = payload.returnCommandTrigger
                 ?? VoiceDictationTranscript.defaultReturnCommandTrigger
@@ -201,6 +220,7 @@ final class VoiceShortcutPreferences: ObservableObject {
             retryShortcut = .retryDefault
             isHandsFreeEnabled = true
             isWakeWordEnabled = false
+            wakeAction = .dictate
             isReturnCommandEnabled = true
             returnCommandTrigger = VoiceDictationTranscript.defaultReturnCommandTrigger
         }
@@ -220,6 +240,7 @@ final class VoiceShortcutPreferences: ObservableObject {
             retryShortcut: retryShortcut,
             isHandsFreeEnabled: isHandsFreeEnabled,
             isWakeWordEnabled: isWakeWordEnabled,
+            wakeAction: wakeAction.rawValue,
             isReturnCommandEnabled: isReturnCommandEnabled,
             returnCommandTrigger: returnCommandTrigger
         )

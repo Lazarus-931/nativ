@@ -40,6 +40,9 @@ final class VoiceDictationExtension: NativHostExtension {
             context.openSpeechModels()
             context.showMainWindow()
         }
+        coordinator.onAskInNewChat = { prompt in
+            context.askInNewChat(prompt)
+        }
         coordinator.start()
         audioCaptureLibrary.start()
         isActive = true
@@ -54,6 +57,7 @@ final class VoiceDictationExtension: NativHostExtension {
         coordinator.transcriptionConfigurationProvider = nil
         audioCaptureLibrary.transcriptionConfigurationProvider = nil
         coordinator.onOpenSpeechModels = nil
+        coordinator.onAskInNewChat = nil
         isActive = false
     }
 

@@ -37,6 +37,7 @@ struct NativExtensionHostContext {
     let transcriptionConfiguration:
         @MainActor @Sendable () -> VoiceTranscriptionConfiguration?
     let openSpeechModels: () -> Void
+    let askInNewChat: (String) -> Void
     let showMainWindow: () -> Void
 }
 
