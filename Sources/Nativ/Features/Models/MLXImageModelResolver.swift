@@ -3,8 +3,7 @@ import NativServerKit
 
 struct MLXImageModelResolver: Sendable {
     static let shared = MLXImageModelResolver(
-        supportedModelTypes: (try? Nativ.imageGenerationModelTypes())
-            ?? ["bonsai", "flux2", "ideogram4", "mage_flow"]
+        supportedModelTypes: (try? Nativ.imageGenerationModelTypes()) ?? []
     )
 
     private let supportedModelTypes: Set<String>
