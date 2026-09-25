@@ -1,0 +1,320 @@
+[
+  {
+    "route": "/blogs/introducing-nativ",
+    "title": "Introducing Nativ",
+    "excerpt": "Introducing Nativ",
+    "text": "Introducing Nativ"
+  },
+  {
+    "route": "/features/artifacts",
+    "title": "Artifacts",
+    "excerpt": "This walkthrough shows how to find a file from an earlier chat and return to the conversation around it. Nativ collects supported files you upload…",
+    "text": "Artifacts This walkthrough shows how to find a file from an earlier chat and return to the conversation around it. Nativ collects supported files you upload or generate in chats automatically. 1. Open the gallery Select Artifacts in the sidebar. The gallery brings images, videos, and documents from different chats into one place. 2. Find the right chat Open Group by and choose Chat . Related files become stacks. In this example, select the Kimi K3 paper review stack to narrow the gallery to that conversation. 3. Preview the file Select the paper. Nativ opens its PDF preview without leaving the gallery, alongside the prompt that introduced it. 4. Return to its context Select Open in Chat . Nativ opens the source chat at the message containing the paper, so you can continue the work instead of searching for that message manually. Next, learn to reuse or organize files, or look up gallery controls."
+  },
+  {
+    "route": "/features/artifacts/controls",
+    "title": "Gallery Controls",
+    "excerpt": "Use these controls when the gallery contains more files than you can comfortably scan.",
+    "text": "Gallery Controls Use these controls when the gallery contains more files than you can comfortably scan. Control What it does Grid View / List View Switch between thumbnails and filename focused rows. Images / Videos / Documents / Favorites Show one kind of artifact or only items you favorited. Group by → Chat Stack artifacts from the same chat. Grouping is unavailable while a search is active. Group by → Source / Date Narrow the gallery by where a file came from or when it was added. Sort Order results by newest, oldest, name, size, or type. Search Match filenames and prompts. With Smart Search and its on device embedding model installed, it can also match by meaning. Clear All Filters Return to the full gallery. In a preview, use the left and right arrows to move through the current results. Pinch to zoom an image. For the basic path from a file back to its conversation, follow the Artifacts walkthrough."
+  },
+  {
+    "route": "/features/artifacts/reuse-and-organize",
+    "title": "Reuse and Organize",
+    "excerpt": "Open Artifacts , then Control click a file to see the actions available for that item.",
+    "text": "Reuse and Organize Open Artifacts , then Control click a file to see the actions available for that item. Use a file again Choose Use in Chat to attach an image to a new conversation, or Use as Image Reference to start new image work from it. Choose Open in Default App when you need to work with the file outside Nativ. Share , Export , Copy , and Reveal in Finder provide other ways to move it into your workflow. Keep it easy to find Choose Add to Favorites for a file you use often. Rename changes its display name in Nativ, not the underlying filename. To act on several files, choose Select above the gallery and select the items you want to share, export, or delete. Delete only when finished Deleting an artifact removes its stored file and removes it from the associated chat history. This cannot be undone. Export anything you need before confirming deletion. For search, grouping, and sorting options, see Artifact gallery controls."
+  },
+  {
+    "route": "/features/audio",
+    "title": "Audio",
+    "excerpt": "This walkthrough takes you from an empty Audio Library to your first saved transcript. You will make a short microphone recording, then find and re…",
+    "text": "Audio This walkthrough takes you from an empty Audio Library to your first saved transcript. You will make a short microphone recording, then find and reuse its text. Before you record Open Audio in Nativ’s sidebar. If it is not there, enable the included Audio extension in Extensions . In Audio’s Model tab, check that an Active model appears. If no speech to text model is installed, select Find models . Start the server before you record so Nativ can transcribe when you finish. 1. Check your microphone Open Record . Choose your microphone under Audio source , then speak briefly: the Input level meter should move. For this first recording, turn Include system audio off so Nativ records only your microphone. 2. Record and complete Select Start recording and say a short note—for example, a decision you need to remember and its next step. macOS may ask for Microphone access. When you are finished, select Complete . Nativ saves the audio and creates a transcript. 3. Find the result Open Library and select the new recording. Use Play to check the audio, open Transcript to read it, then Copy the text into your notes. Give the recording a descriptive title so you can find it later. To get summarized notes too, leave Auto summary on before recording and have a language model installed. If a recording has audio but no transcript, select Transcribe in the Library to try again. Next, dictate into any app. You can also find an Audio control or see how recordings are stored."
+  },
+  {
+    "route": "/features/audio/controls",
+    "title": "Audio controls",
+    "excerpt": "Use this page to find a control after you have made your first recording. You do not need to configure every tab before using Audio.",
+    "text": "Audio controls Use this page to find a control after you have made your first recording. You do not need to configure every tab before using Audio. Tab What it controls Record Microphone, input level, system audio, Auto summary, and optional meeting transcription suggestions. Complete saves the current take; Restart begins again; Delete discards it. Library Saved recordings and recent dictations. Play audio, read or copy a transcript or summary, rename a recording, retry transcription, or reveal its file in Finder. Model Choose Automatic or a specific installed speech to text model. Find models appears when none is available. Summaries require a language model as well. Shortcuts Change the global dictation and retry shortcuts. Hands free switches dictation from hold and release to tap to start and tap to stop. Animation Choose how dictation and recording appear while active, and select a capture sound. Overview Review local dictation activity, including words dictated, average speed, estimated time saved, and recent activity. For the difference between saved recordings and temporary dictation audio, read How Audio handles your recordings."
+  },
+  {
+    "route": "/features/audio/dictate-anywhere",
+    "title": "Dictate into any app",
+    "excerpt": "Use dictation when you want your words inserted where you are already typing, without making a saved recording in the Audio Library.",
+    "text": "Dictate into any app Use dictation when you want your words inserted where you are already typing, without making a saved recording in the Audio Library. 1. In Nativ’s Audio → Model tab, check that a speech to text model is active and the server is running. 2. Open a text field in the app where you want the words to appear. Place the cursor where the sentence should begin. 3. Hold Fn + Control , speak, then release the keys. Nativ transcribes your speech, inserts it at the cursor, and copies it to the clipboard. If you prefer not to hold the keys, open Audio → Shortcuts and enable Hands free . Tap the dictation shortcut once to start and again to transcribe. You can change the shortcut on that same screen. Use Fn + R to retry the most recent audio. Your text also appears under Audio → Library → Recent dictations . Dictation’s raw audio is deleted after five minutes; its transcript remains until you delete it. If the shortcut does nothing outside Nativ, allow Nativ Accessibility access in macOS System Settings, then check the shortcut currently shown in Audio → Shortcuts ."
+  },
+  {
+    "route": "/features/audio/recordings-and-privacy",
+    "title": "Recordings & Privacy",
+    "excerpt": "Audio has two different capture flows. Record creates a persistent file in your local Audio Library. Dictation captures only enough audio to insert…",
+    "text": "Recordings & Privacy Audio has two different capture flows. Record creates a persistent file in your local Audio Library. Dictation captures only enough audio to insert text into another app; its raw audio is deleted after five minutes or when Nativ quits. Dictation transcripts and activity history remain on your Mac until you delete them. When you complete a saved recording, Nativ keeps its audio and attempts to transcribe it with your selected speech to text model. A language model can then turn the transcript into summarized notes. The Nativ server must be running for transcription and summarization. If processing fails, the saved audio can still be available in Library for another attempt. The permissions depend on what you do: Permission Needed for Microphone Recording your voice. Screen & System Audio Recording Including audio playing in other apps. Accessibility Detecting the global dictation shortcut and inserting text into other apps. Deleting a saved recording also permanently deletes its transcript and summary. Export or copy anything you need first. To open the storage folder, select Audio Library at the top of Audio."
+  },
+  {
+    "route": "/features/model-configuration",
+    "title": "Model Configuration",
+    "excerpt": "Use this walkthrough to give a model a consistent role and compare one small change. Leave advanced controls at their defaults until you have a spe…",
+    "text": "Model Configuration Use this walkthrough to give a model a consistent role and compare one small change. Leave advanced controls at their defaults until you have a specific problem to solve. 1. Open the panel In a chat with a model selected, choose Model Configuration in the upper right corner. The panel opens on the right. The circular arrow in its title bar resets all Nativ settings , so do not use it to close the panel; select the Model Configuration button again instead. 2. Give the model a role Under Model Context , enter a short System prompt . For example: Act as a careful research assistant. Separate claims from evidence, preserve uncertainty, and use concise headings. Leave Context window at the model provided value for your first test. Max output is a response length ceiling, not a target. 3. Change one sampling control Set Temperature to 0.2 for a fairly steady research response. Leave Top K, Top P, and Min P alone for now. Send a representative prompt and read the answer. Then change only Temperature and send the same prompt again to compare. The panel tells you when edits apply to the next message and when a server restart is required . Do not judge a restart required change until you restart. For specific controls, see the reference; for task focused instructions, see reduce memory use or produce structured JSON."
+  },
+  {
+    "route": "/features/model-configuration/controls",
+    "title": "Model Controls",
+    "excerpt": "Use this reference when a setting has a specific job to do. For a first experiment, follow the Model Configuration walkthrough instead of changing…",
+    "text": "Model Controls Use this reference when a setting has a specific job to do. For a first experiment, follow the Model Configuration walkthrough instead of changing everything here. When changes take effect Timing Controls Next message System prompt, Thinking, sampling, and Structured Output. Send a new message or regenerate to evaluate the change. After server restart Max output and context window launch limits, KV quantization, speculative decoding, and prefix caching. Wait until the orange Server restart required message disappears. Context and sampling Control What to know Max output Maximum response length in tokens. A ceiling, not a target. Check it if answers end abruptly. Context window How much conversation, attachment text, and instruction content the server can retain. Larger windows use more memory; start with the model's declared size. The composer shows current context usage. System prompt Persistent behavior for the conversation. Leaving the field empty keeps the model template's default, if it has one. Put one off questions in the chat instead. Temperature Variation in token choice. 0 is useful for repeatable extraction; 0.2–0.5 allows modest variation; higher values can help creative drafting but may be less consistent. Top K Limits choices to the K most likely tokens. 0 disables this filter. Top P Keeps a probability based set of likely tokens. 1 leaves the full set available. Min P Filters tokens far below the most likely token. 0 disables it. Aggressive values can remove useful uncommon terms. Repetition penalty Use when a model loops. Strong values can damage legitimate repetition in code, names, and tables. Change one sampling value at a time and compare the same prompt before and after. Temperature does not add knowledge or reasoning ability. Thinking Thinking is for a model that supports reasoning on multi step tasks. Limit thinking gives it a token budget; a smaller budget can reduce latency. Keep Start token and EOS token at their defaults unless the model's documentation specifies different markers. Nativ disables Thinking when the selected model does not advertise reasoning support and remembers supported model specific profiles when you switch models. A limited thinking budget is unavailable with speculative decoding. Memory and speed Control What to know Quantize KV cache Stores the growing attention cache at lower precision to reduce memory use. Lower KV bits save more memory but may affect output quality. Group size / Quantize after Keep the default group size unless reproducing a known configuration. Quantize after leaves the first specified tokens at full precision. TurboQuant Alternate cache scheme that changes the suggested bits and hides uniform quantization group size. Compare quality and memory before keeping it. Drafter Enables speculative decoding with a compatible smaller draft model. A mismatched target or hidden size can prevent the server from loading. Family / Block size Leave family on Auto unless the drafter requires DFlash, EAGLE3, or MTP. Block size 0 lets the backend choose; larger blocks help only when draft acceptance is high. Prefix Caching Reuses blocks at the beginning of similar long prompts. Cache blocks sets capacity; Tokens per block sets block size. It is not useful when requests share little opening text. For a measured memory problem, follow Reduce memory use. KV cache, drafter, and prefix cache changes need a server restart. Structured Output and reset Structured Output constrains generation with a named JSON Schema. Nativ validates the schema, but valid JSON shape does not guarantee true values. Produce structured JSON shows a complete example. Structured Output and speculative decoding cannot be active together. The circular arrow Reset button restores the complete Nativ settings object, not merely the last field you changed. Review your model and server settings after using it."
+  },
+  {
+    "route": "/features/model-configuration/reduce-memory",
+    "title": "Reduce Memory Use",
+    "excerpt": "Use KV cache quantization when a long conversation or document pushes memory use too high. It reduces the attention cache, not the model weights. I…",
+    "text": "Reduce Memory Use Use KV cache quantization when a long conversation or document pushes memory use too high. It reduces the attention cache, not the model weights. If the model itself will not fit, choose a smaller model instead. 1. Open a chat with the model you want to tune, then open Model Configuration . 2. Enable Quantize KV cache . Start with the default bit and group size values; lower bits save more memory but may change output quality. 3. If you want the beginning of each prompt kept at full precision, set Quantize after to a token count such as 256 . 4. Restart the server when Nativ shows Server restart required . Run the same representative prompt and compare memory use and the answer with your earlier result. If quality worsens, raise the bit setting or turn quantization off and restart again. TurboQuant is a separate advanced scheme; compare it only after you have a baseline."
+  },
+  {
+    "route": "/features/model-configuration/structured-output",
+    "title": "Produce Structured JSON",
+    "excerpt": "Use Structured Output when another program needs predictable JSON fields instead of prose. In this example, a paper review returns a claim, support…",
+    "text": "Produce Structured JSON Use Structured Output when another program needs predictable JSON fields instead of prose. In this example, a paper review returns a claim, supporting evidence, and a confidence number. 1. Open Model Configuration → Structured Output . Turn off Drafter if it is enabled; the two modes cannot run together. 2. Enable Enforce JSON schema and set Schema name to PaperReview . 3. Paste this schema into JSON schema : { \"type\": \"object\", \"properties\": { \"claim\": { \"type\": \"string\" }, \"evidence\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } }, \"confidence\": { \"type\": \"number\" } }, \"required\": [\"claim\", \"evidence\", \"confidence\"], \"additionalProperties\": false } Nativ shows an error below the editor if the schema cannot be parsed. Once it is valid, send a new paper review prompt to test the output. The schema constrains the answer's shape , not its truth. Check important claims and values before using them downstream."
+  },
+  {
+    "route": "/getting-started",
+    "title": "Get Started",
+    "excerpt": "Nativ runs AI models locally on an Apple silicon Mac. No account is required. Follow these guides in order to go from a fresh installation to your…",
+    "text": "Get Started Nativ runs AI models locally on an Apple silicon Mac. No account is required. Follow these guides in order to go from a fresh installation to your first conversation. When you first open Nativ, guided setup helps you choose a model and prepare the local server. Install the app on a Mac with Apple silicon and macOS 26 or newer. Find a model that fits your Mac and download it. Start Nativ's local runtime and check that it is live. Send a prompt and read your first locally generated answer. Adjust appearance and chat text size for comfortable reading."
+  },
+  {
+    "route": "/getting-started/build-from-source",
+    "title": "Build from Source",
+    "excerpt": "Use this route if you want to develop Nativ locally. You need Xcode with the macOS 26 SDK, XcodeGen, and Python 3.",
+    "text": "Build from Source Use this route if you want to develop Nativ locally. You need Xcode with the macOS 26 SDK, XcodeGen, and Python 3. From the Nativ source directory, run: brew install xcodegen make xcode generate make xcode build open build/XcodeDerivedData/Build/Products/Debug/Nativ.app The first build assembles a Python runtime and installs Nativ's pinned server dependencies into the app bundle. Later builds reuse the bundle until its inputs change. After the app opens, continue with Downloading Models."
+  },
+  {
+    "route": "/getting-started/customization",
+    "title": "Customization",
+    "excerpt": "Make a chat comfortable to read. Appearance changes the whole Nativ app; chat text size changes only message and composer text.",
+    "text": "Customization Make a chat comfortable to read. Appearance changes the whole Nativ app; chat text size changes only message and composer text. 1. Open General settings Select the gear at the bottom of the sidebar, or press ⌘, . In General , find Appearance and Chat Text Size . 2. Try the changes Choose System to follow macOS, or choose Light or Dark to keep one appearance. Drag Chat Text Size until a conversation is easy to read. Changes appear immediately, so you can compare them with a chat open. The preview below shows the same conversation in both appearances and at three representative sizes. Try it before changing Nativ if you are unsure which you prefer. Nativ has five text size stops from 85% to 150% ; the preview shows Small , Default , and Large . You can also press ⌘+ or ⌘− in Nativ to change chat text size, or ⌘0 to return to 100%."
+  },
+  {
+    "route": "/getting-started/downloading-models",
+    "title": "Downloading Models",
+    "excerpt": "Download one model before your first chat. You can add more later.",
+    "text": "Downloading Models Download one model before your first chat. You can add more later. 1. Open Models Select Models in Nativ's sidebar, then open Discover . 2. Find a model Browse the list or search by name. Check its capability tags and size; a smaller model is a practical first choice if your Mac has limited unified memory. 3. Check its details Select a model to read its description and see its size, license, and other details. Choose one that fits your Mac and your task. 4. Download it Select Download and wait for the progress bar to finish. The model then appears under Installed , ready to select for chat. Next, start the server."
+  },
+  {
+    "route": "/getting-started/first-chat",
+    "title": "Your First Chat",
+    "excerpt": "This walkthrough takes you from an empty chat to a reply from a model running on your Mac. First, download a model and start the server.",
+    "text": "Your First Chat This walkthrough takes you from an empty chat to a reply from a model running on your Mac. First, download a model and start the server. 1. Start a chat and choose a model Select New chat in the sidebar. Open the model menu beside the message box and choose an installed model. Its name appears next to the send button. 2. Send a clear request Type a small task into the message box, such as: Give me three simple tips for staying focused while working. Press Return or select the blue send arrow. Use Command+Return when you want a new line without sending. 3. Read the reply The answer appears below your message. A model's first response can take longer while it loads into unified memory. Once the answer finishes, type a follow up in the same chat; Nativ keeps the earlier messages as context. Use New chat when you change subjects. If you cannot send, check that a model is selected and the server is running. If generation fails, open Dev → Developer → Server Output for the error. Next, adjust appearance and chat text size, or learn how to find files in Artifacts."
+  },
+  {
+    "route": "/getting-started/installation",
+    "title": "Installation",
+    "excerpt": "Install Nativ on a Mac with Apple silicon and macOS 26 or newer.",
+    "text": "Installation Install Nativ on a Mac with Apple silicon and macOS 26 or newer. 1. Download the DMG from Nativ releases. 2. Open the DMG and drag Nativ into Applications . 3. Launch Nativ from Applications and follow the first run setup. Nativ uses in app updates, so you do not need to repeat these steps for each release. If you are developing Nativ rather than installing a release, follow Build from Source. Next, download a model."
+  },
+  {
+    "route": "/getting-started/server-details",
+    "title": "Server Details",
+    "excerpt": "You do not need these details for a normal chat. Use them when connecting another app or checking why the server has not started.",
+    "text": "Server Details You do not need these details for a normal chat. Use them when connecting another app or checking why the server has not started. Address and access By default, Nativ listens at http://127.0.0.1:8080 . That address reaches the server on your Mac , not from another device. API clients must send your Nativ API key as a Bearer token. Check its status A stop button at the bottom of Nativ's sidebar means the server is running. For a clearer check, open Dev → Developer and look for the green Live status. Server Output on that page shows the latest start up or model loading error. If it is not live Port 8080 is in use: Change the port on the Developer page, then start the server again. A model will not load: Check Models → Installed , then read Server Output for the error. It is still starting: Larger models can take longer. Wait for Live or an error before retrying. To stop the server, select the sidebar's stop button or choose Stop Server from Nativ's menu bar menu. Your models and conversations remain on your Mac."
+  },
+  {
+    "route": "/getting-started/starting-server",
+    "title": "Starting Server",
+    "excerpt": "Nativ's local server runs your installed models. If the bottom of the sidebar already shows a stop button, it is running and you can move on to You…",
+    "text": "Starting Server Nativ's local server runs your installed models. If the bottom of the sidebar already shows a stop button, it is running and you can move on to Your First Chat. 1. Find the control Open Nativ and find the circular play button at the bottom of the sidebar. 2. Start the server Select the play button. Wait for it to change to a stop button. Loading a larger model can take longer. You can also choose Start Server from Nativ's menu bar menu. 3. Check that it is live Open Dev → Developer . A green Live status confirms that the server is running. If it does not become live, read Server Output on that page for the latest error. Server details explains the address, port, and common start up problems."
+  },
+  {
+    "route": "/integrations/claude-code",
+    "title": "Claude Code",
+    "excerpt": "Claude Code",
+    "text": "Claude Code"
+  },
+  {
+    "route": "/integrations/codex",
+    "title": "Codex",
+    "excerpt": "Codex",
+    "text": "Codex"
+  },
+  {
+    "route": "/integrations/hermes",
+    "title": "Hermes",
+    "excerpt": "Hermes",
+    "text": "Hermes"
+  },
+  {
+    "route": "/integrations/opencode",
+    "title": "OpenCode",
+    "excerpt": "OpenCode",
+    "text": "OpenCode"
+  },
+  {
+    "route": "/integrations/pi",
+    "title": "Pi",
+    "excerpt": "Pi",
+    "text": "Pi"
+  },
+  {
+    "route": "/models/cohere",
+    "title": "Cohere",
+    "excerpt": "Cohere",
+    "text": "Cohere"
+  },
+  {
+    "route": "/models/cohere/aya-vision",
+    "title": "Aya Vision",
+    "excerpt": "Aya Vision",
+    "text": "Aya Vision"
+  },
+  {
+    "route": "/models/cohere/command-a",
+    "title": "Command A",
+    "excerpt": "Command A",
+    "text": "Command A"
+  },
+  {
+    "route": "/models/cohere/command-a-vision",
+    "title": "Command A Vision",
+    "excerpt": "Command A Vision",
+    "text": "Command A Vision"
+  },
+  {
+    "route": "/models/deepseek",
+    "title": "DeepSeek",
+    "excerpt": "DeepSeek",
+    "text": "DeepSeek"
+  },
+  {
+    "route": "/models/deepseek/deepseek-v3-2",
+    "title": "DeepSeek-V3.2",
+    "excerpt": "DeepSeek V3.2",
+    "text": "DeepSeek V3.2"
+  },
+  {
+    "route": "/models/deepseek/deepseek-v4",
+    "title": "DeepSeek-V4",
+    "excerpt": "DeepSeek V4",
+    "text": "DeepSeek V4"
+  },
+  {
+    "route": "/models/deepseek/deepseek-v4-flash-vision-exp",
+    "title": "DeepSeek-V4-Flash-Vision-Exp",
+    "excerpt": "DeepSeek V4 Flash Vision Exp",
+    "text": "DeepSeek V4 Flash Vision Exp"
+  },
+  {
+    "route": "/models/google-deepmind",
+    "title": "Google DeepMind",
+    "excerpt": "Google DeepMind",
+    "text": "Google DeepMind"
+  },
+  {
+    "route": "/models/liquid",
+    "title": "Liquid AI",
+    "excerpt": "Liquid AI",
+    "text": "Liquid AI"
+  },
+  {
+    "route": "/models/liquid/lfm2",
+    "title": "LFM2",
+    "excerpt": "LFM2",
+    "text": "LFM2"
+  },
+  {
+    "route": "/models/liquid/lfm2-5",
+    "title": "LFM2.5",
+    "excerpt": "LFM2.5",
+    "text": "LFM2.5"
+  },
+  {
+    "route": "/models/liquid/lfm2-5-vl",
+    "title": "LFM2.5-VL",
+    "excerpt": "LFM2.5 VL",
+    "text": "LFM2.5 VL"
+  },
+  {
+    "route": "/models/moonshot",
+    "title": "Moonshot",
+    "excerpt": "Moonshot",
+    "text": "Moonshot"
+  },
+  {
+    "route": "/models/moonshot/kimi-k3",
+    "title": "Kimi K3",
+    "excerpt": "Kimi K3",
+    "text": "Kimi K3"
+  },
+  {
+    "route": "/models/poolside",
+    "title": "Poolside",
+    "excerpt": "Poolside",
+    "text": "Poolside"
+  },
+  {
+    "route": "/models/poolside/laguna",
+    "title": "Laguna",
+    "excerpt": "Laguna",
+    "text": "Laguna"
+  },
+  {
+    "route": "/models/poolside/laguna-s",
+    "title": "Laguna S",
+    "excerpt": "Laguna S",
+    "text": "Laguna S"
+  },
+  {
+    "route": "/models/poolside/laguna-xs",
+    "title": "Laguna XS",
+    "excerpt": "Laguna XS",
+    "text": "Laguna XS"
+  },
+  {
+    "route": "/models/qwen",
+    "title": "Qwen",
+    "excerpt": "Qwen",
+    "text": "Qwen"
+  },
+  {
+    "route": "/models/qwen/qwen3-5-vl",
+    "title": "Qwen3.5-VL",
+    "excerpt": "Qwen3.5 VL",
+    "text": "Qwen3.5 VL"
+  },
+  {
+    "route": "/models/qwen/qwen3-8-27b",
+    "title": "Qwen3.8-27B",
+    "excerpt": "Qwen3.8 27B",
+    "text": "Qwen3.8 27B"
+  },
+  {
+    "route": "/models/qwen/qwen3-8-flash-next",
+    "title": "Qwen3.8-Flash-Next",
+    "excerpt": "Qwen3.8 Flash Next",
+    "text": "Qwen3.8 Flash Next"
+  },
+  {
+    "route": "/models/zai",
+    "title": "Z.ai",
+    "excerpt": "Z.ai",
+    "text": "Z.ai"
+  },
+  {
+    "route": "/models/zai/glm-4-7",
+    "title": "GLM-4.7",
+    "excerpt": "GLM 4.7",
+    "text": "GLM 4.7"
+  },
+  {
+    "route": "/models/zai/glm-5-3",
+    "title": "GLM-5.3",
+    "excerpt": "GLM 5.3",
+    "text": "GLM 5.3"
+  },
+  {
+    "route": "/models/zai/glm-5-3-flash",
+    "title": "GLM-5.3-Flash",
+    "excerpt": "GLM 5.3 Flash",
+    "text": "GLM 5.3 Flash"
+  },
+  {
+    "route": "/new",
+    "title": "What's new",
+    "excerpt": "Every Nativ release and what it brings — newest first.",
+    "text": "What's new Every Nativ release and what it brings — newest first. New version of Nativ. View the release on GitHub. New features Agent tools — file writing, editing, and search, plus a terminal tool for shell commands. Custom Kits & model registry — manage your own Kits alongside a shared model registry. Context window ring — a live context usage indicator in the chat composer. Changed Multi window support — synchronized data, coordinated inference, and window scoped commands across windows. Standardized panels, status indicators, and typography across the app. LFM2.5 2.6B is the new fast default; faster builds and a lazy chat transcript. Fixed Detect a busy server port before launch instead of reporting a crash. Fix port reuse when switching models and unknown tool mislabeling. New version of Nativ. View the release on GitHub. New features GLM 5.3 Flash (Z.ai) added to the partner models. Safe file reading — an optional tool to read files from a folder you choose. Discover third party server tools installed via Homebrew. Changed Simplified custom MCP stdio setup; stabilized Kit definitions and activation. Improved file processing and documented the Homebrew install path. Fixed Allow slow local models to start; keep models whose shard index describes another build. New version of Nativ. View the release on GitHub. New features System stats now report temperature, fans, and power. Hugging Face token stored in the Keychain, audio upload to the library, and live server settings. Changed Reworked control panel with smooth animations and smoother sidebar resizing. Moved several stores off the main thread and onto @Observable . Fixed Better gated model download errors, multi key audio shortcuts, long prompt scrolling, and the dark mode overlay. New version of Nativ. View the release on GitHub. New features Scheduled tasks workspace — a dedicated space for scheduled tasks. Fixed Core audio callback isolation and audio transcription configuration lifetime. New version of Nativ. View the release on GitHub. New features Reranking capability discovery , conversation forks for prompt editing, and shared document extraction. Changed Incremental fully styled streamed markdown, Swift 6.3 with concurrency fixes, and polished sidebar and model controls. Fixed Recover from a frozen chat instead of locking the UI; microphone permission flow; download progress reporting. New version of Nativ. View the release on GitHub. New features Parallel Search in the MCP catalog, a model README details panel, and global model folder access. Changed Improved model discovery, downloads, and provider branding; polished navigation, composers, and Artifacts; better chat markdown. Fixed Stabilized onboarding model metadata loading. Looking for older versions? See the full release history on GitHub."
+  }
+]

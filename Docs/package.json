@@ -1,0 +1,30 @@
+{
+  "name": "nativ-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Documentation for Nativ — local AI, native to your Mac.",
+  "scripts": {
+    "gen": "node scripts/gen-raw.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "predev": "npm run gen",
+    "dev": "next dev",
+    "build": "npm run gen && npm run check:docs && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "export": "NEXT_PUBLIC_BASE_PATH=/nativ/docs npm run gen && NEXT_PUBLIC_BASE_PATH=/nativ/docs next build",
+    "deploy": "npm run export && rm -rf ../website/docs && cp -r out ../website/docs"
+  },
+  "dependencies": {
+    "@markdoc/markdoc": "^0.5.1",
+    "@markdoc/next.js": "^0.3.7",
+    "next": "^14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4"
+  }
+}

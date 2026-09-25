@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+
+# generated raw page mirrors (npm run gen)
+public/**/*.md
+public/**/*.txt
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
+.env*.local
