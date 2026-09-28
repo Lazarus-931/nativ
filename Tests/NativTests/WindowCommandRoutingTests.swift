@@ -43,6 +43,36 @@ final class WindowCommandRoutingTests: XCTestCase {
         XCTAssertEqual(navigation.modelDiscoveryRequest, 1)
     }
 
+    func testParsesHuggingFaceDeepLink() throws {
+        let url = try XCTUnwrap(URL(string: "nativ://open_from_hf?model=mlx-community/Qwen2.5-VL-7B-Instruct-4bit"))
+
+        XCTAssertEqual(
+            NativWindowIntent(url: url),
+            .openModelDiscovery("mlx-community/Qwen2.5-VL-7B-Instruct-4bit")
+        )
+
+        let navigation = ControlPanelNavigation()
+        navigation.perform(try XCTUnwrap(NativWindowIntent(url: url)))
+        XCTAssertEqual(navigation.requestedTab, .models)
+        XCTAssertEqual(navigation.modelDiscoveryRepositoryID, "mlx-community/Qwen2.5-VL-7B-Instruct-4bit")
+    }
+
+    func testRejectsMalformedDeepLinks() {
+        let links = [
+            "nativ://open_from_hf",
+            "nativ://open_from_hf?model=",
+            "nativ://open_from_hf?model=no-owner",
+            "nativ://open_from_hf?model=owner/name/extra",
+            "nativ://open_from_hf?model=../etc",
+            "nativ://open_from_hf?model=owner/name%20evil",
+            "nativ://something_else?model=owner/name",
+            "lmstudio://open_from_hf?model=owner/name",
+        ]
+        for link in links {
+            XCTAssertNil(NativWindowIntent(url: URL(string: link)!), link)
+        }
+    }
+
     func testOpensDrafterDiscoveryForTargetModel() {
         let navigation = ControlPanelNavigation()
         let targetID = "mlx-community/Qwen3.8-27B-4bit"

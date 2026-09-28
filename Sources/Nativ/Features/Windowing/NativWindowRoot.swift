@@ -29,6 +29,11 @@ struct NativWindowRoot: View {
             .onChange(of: appearance) { _, newAppearance in
                 applyAppearance(newAppearance)
             }
+            .onOpenURL { url in
+                guard let intent = NativWindowIntent(url: url) else { return }
+                appDelegate.performWindowIntent(intent)
+            }
+            .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
     }
 
     private func openMainWindow() {
