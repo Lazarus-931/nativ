@@ -22,8 +22,29 @@ final class MCPHostManager: ObservableObject {
         let tools: [MCPToolInfo]
     }
 
+    private final class ScopedClient {
+        let config: MCPServerConfig
+        let client: MCPClient
+        var inFlight = 0
+        var lastUsed = Date()
+        var isPoisoned = false
+
+        init(config: MCPServerConfig, client: MCPClient) {
+            self.config = config
+            self.client = client
+        }
+    }
+
+    private struct ScopedKey: Hashable {
+        let server: UUID
+        let root: String
+    }
+
+    private static let scopedIdleTimeout: TimeInterval = 120
+    private static let scopedClientLimit = 4
+
     private var connections: [UUID: Connection] = [:]
-    private var projectCalls: [UUID: (config: MCPServerConfig, client: MCPClient)] = [:]
+    private var scopedClients: [ScopedKey: ScopedClient] = [:]
     private let catalog: MCPServerCatalog
     private var appliedServers: [MCPServerConfig] = []
     private var reloadTask: Task<Void, Never>?
@@ -40,9 +61,8 @@ final class MCPHostManager: ObservableObject {
 
     func toolDefinitions(projectScope: ChatToolScope? = nil) -> [MLXChatToolDefinition] {
         connections.values.flatMap { connection -> [MLXChatToolDefinition] in
-            if let projectScope, projectScope.isProject,
-                !projectScope.projectToolsAreAvailable,
-                isProjectFilesystem(connection.config) {
+            if let projectScope, !projectScope.fileToolsAreAvailable,
+                requiresFolder(connection.config) {
                 return []
             }
             return Self.toolDefinitions(for: connection)
@@ -74,49 +94,125 @@ final class MCPHostManager: ObservableObject {
         guard let route = route(for: name) else {
             throw MCPClientError.notConnected
         }
-        guard isProjectFilesystem(route.connection.config),
-            let projectScope, projectScope.isProject else {
+        guard requiresFolder(route.connection.config), let projectScope else {
             return try await route.connection.client.callTool(
                 name: route.toolName, argumentsJSON: argumentsJSON
             )
         }
 
-        let directory = try Self.projectDirectory(
+        let directory = try Self.scopedDirectory(
             expected: projectScope, current: currentProjectScope?() ?? projectScope
         )
+        try Self.validatePathArguments(argumentsJSON, root: directory)
         let config = route.connection.config
-        let client = await route.connection.client.scopedToDirectory(
-            directory, arguments: Array(config.arguments.dropLast()) + [directory.path]
-        )
         try Task.checkCancellation()
         guard connections[config.id] != nil, isEnabled(config) else {
             throw MCPClientError.notConnected
         }
-        let callID = UUID()
-        projectCalls[callID] = (config, client)
-        defer { projectCalls[callID] = nil }
+        let key = ScopedKey(server: config.id, root: directory.path)
+        let entry = try await acquireScopedClient(
+            key: key, config: config, directory: directory, base: route.connection.client
+        )
         return try await withTaskCancellationHandler {
             do {
-                _ = try await client.connectAndListTools()
                 try Task.checkCancellation()
-                guard projectCalls[callID] != nil, isEnabled(config) else {
+                guard scopedClients[key] === entry, isEnabled(config) else {
                     throw MCPClientError.notConnected
                 }
-                _ = try Self.projectDirectory(
+                _ = try Self.scopedDirectory(
                     expected: projectScope, current: currentProjectScope?() ?? projectScope
                 )
-                let result = try await client.callTool(
+                let result = try await entry.client.callTool(
                     name: route.toolName, argumentsJSON: argumentsJSON
                 )
-                await client.disconnect()
+                await release(key, entry, poison: false)
                 return result
             } catch {
-                await client.disconnect()
+                await release(key, entry, poison: !Self.isToolFailure(error))
                 throw error
             }
         } onCancel: {
-            Task { await client.disconnect() }
+            Task { @MainActor [weak self] in await self?.poison(key) }
         }
+    }
+
+    /// Reuses a live process for the same server and root, so a chat doing several
+    /// file operations pays one launch instead of one per call.
+    private func acquireScopedClient(
+        key: ScopedKey,
+        config: MCPServerConfig,
+        directory: URL,
+        base: MCPClient
+    ) async throws -> ScopedClient {
+        if let existing = reusableScopedClient(key) { return existing }
+        await evictScopedClients()
+        let client = await base.scopedToDirectory(
+            directory, arguments: config.arguments + [directory.path]
+        )
+        do {
+            _ = try await client.connectAndListTools()
+        } catch {
+            await client.disconnect()
+            throw error
+        }
+        // Another call for the same root may have won the race while this one was
+        // connecting; publishing only a connected client keeps reuse from handing
+        // out a process that is still starting.
+        if let existing = reusableScopedClient(key) {
+            await client.disconnect()
+            return existing
+        }
+        let entry = ScopedClient(config: config, client: client)
+        entry.inFlight = 1
+        scopedClients[key] = entry
+        return entry
+    }
+
+    private func reusableScopedClient(_ key: ScopedKey) -> ScopedClient? {
+        guard let existing = scopedClients[key], !existing.isPoisoned else { return nil }
+        existing.inFlight += 1
+        existing.lastUsed = Date()
+        return existing
+    }
+
+    private func release(_ key: ScopedKey, _ entry: ScopedClient, poison: Bool) async {
+        entry.inFlight -= 1
+        entry.lastUsed = Date()
+        guard poison || entry.isPoisoned else { return }
+        entry.isPoisoned = true
+        if scopedClients[key] === entry { scopedClients[key] = nil }
+        if entry.inFlight <= 0 { await entry.client.disconnect() }
+    }
+
+    /// Cancellation has to close the process, not just drop the entry: the in-flight
+    /// request only fails once the transport goes away.
+    private func poison(_ key: ScopedKey) async {
+        guard let entry = scopedClients[key] else { return }
+        entry.isPoisoned = true
+        scopedClients[key] = nil
+        await entry.client.disconnect()
+    }
+
+    private func evictScopedClients() async {
+        let now = Date()
+        for (key, entry) in scopedClients
+        where entry.inFlight == 0
+            && now.timeIntervalSince(entry.lastUsed) > Self.scopedIdleTimeout {
+            scopedClients[key] = nil
+            await entry.client.disconnect()
+        }
+        while scopedClients.count >= Self.scopedClientLimit,
+            let oldest = scopedClients
+                .filter({ $0.value.inFlight == 0 })
+                .min(by: { $0.value.lastUsed < $1.value.lastUsed }) {
+            scopedClients[oldest.key] = nil
+            await oldest.value.client.disconnect()
+        }
+    }
+
+    private static func isToolFailure(_ error: Error) -> Bool {
+        if case MCPClientError.toolFailed = error { return true }
+        return false
     }
 
     private func isEnabled(_ config: MCPServerConfig) -> Bool {
@@ -125,20 +221,21 @@ final class MCPHostManager: ObservableObject {
         }
     }
 
-    private func isProjectFilesystem(_ config: MCPServerConfig) -> Bool {
-        guard let entry = catalog.entry(matching: config), entry.id == "filesystem" else {
+    /// A catalog server whose root Nativ supplies. Editing its launch arguments opts
+    /// out, leaving the server exactly as the user configured it.
+    private func requiresFolder(_ config: MCPServerConfig) -> Bool {
+        guard let entry = catalog.entry(matching: config), entry.requiresFolder else {
             return false
         }
         return config.command == entry.command && config.arguments == entry.arguments
-            && config.arguments.last == "."
     }
 
-    static func projectDirectory(expected: ChatToolScope, current: ChatToolScope) throws -> URL {
-        guard expected.projectToolsAreAvailable, current.projectToolsAreAvailable,
+    static func scopedDirectory(expected: ChatToolScope, current: ChatToolScope) throws -> URL {
+        guard expected.fileToolsAreAvailable, current.fileToolsAreAvailable,
             expected.projectID == current.projectID, expected.rootPath == current.rootPath,
             let path = expected.rootPath, path.hasPrefix("/") else {
             throw MCPClientError.toolFailed(
-                "Project file access is disabled or the project folder has changed or is unavailable."
+                "File access is disabled or the folder has changed or is unavailable."
             )
         }
         let directory = URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
@@ -147,9 +244,42 @@ final class MCPHostManager: ObservableObject {
             FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory),
             isDirectory.boolValue,
             FileWriteAccessPolicy.isConfigured(rootPath: directory.path) else {
-            throw MCPClientError.toolFailed("The project folder is no longer available.")
+            throw MCPClientError.toolFailed("The folder is no longer available.")
         }
         return directory
+    }
+
+    /// Holds a folder-scoped server to the same blocklist the native file tools use,
+    /// instead of trusting it to police its own sandbox.
+    static func validatePathArguments(_ argumentsJSON: String?, root: URL) throws {
+        guard let argumentsJSON,
+            let object = try? JSONSerialization.jsonObject(with: Data(argumentsJSON.utf8)),
+            let arguments = object as? [String: Any]
+        else { return }
+        guard let policy = try? FileReadAccessPolicy(rootPath: root.path) else {
+            throw MCPClientError.toolFailed("The folder is no longer available.")
+        }
+        for key in ["path", "paths", "source", "destination"] {
+            let paths: [String]
+            switch arguments[key] {
+            case let value as String: paths = [value]
+            case let value as [String]: paths = value
+            default: continue
+            }
+            for path in paths {
+                do {
+                    _ = try policy.resolve(path: path)
+                } catch FileReadAccessError.outsideAllowedRoot {
+                    throw MCPClientError.toolFailed(
+                        "Access denied - \(path) is outside allowed directories."
+                    )
+                } catch {
+                    throw MCPClientError.toolFailed(
+                        "Access denied - \(path) is a protected path."
+                    )
+                }
+            }
+        }
     }
 
     func reload(servers: [MCPServerConfig]) {
@@ -179,13 +309,13 @@ final class MCPHostManager: ObservableObject {
         reloadTask?.cancel()
         reloadGeneration += 1
         let previous = connections
-        let previousProjectCalls = projectCalls
-        projectCalls = [:]
+        let previousScoped = scopedClients
+        scopedClients = [:]
         connections = [:]
         states = [:]
         Task {
-            for call in previousProjectCalls.values {
-                await call.client.disconnect()
+            for scoped in previousScoped.values {
+                await scoped.client.disconnect()
             }
             for connection in previous.values {
                 await connection.client.disconnect()
@@ -210,10 +340,10 @@ final class MCPHostManager: ObservableObject {
         let enabled = servers.filter(\.isEnabled)
         let enabledByID = Dictionary(enabled.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        for (id, call) in projectCalls {
-            if !enabled.contains(where: { $0.id == call.config.id && Self.launchEquivalent($0, call.config) }) {
-                projectCalls[id] = nil
-                await call.client.disconnect()
+        for (key, scoped) in scopedClients {
+            if !enabled.contains(where: { $0.id == scoped.config.id && Self.launchEquivalent($0, scoped.config) }) {
+                scopedClients[key] = nil
+                await scoped.client.disconnect()
             }
         }
         for (id, connection) in connections {
@@ -255,15 +385,18 @@ final class MCPHostManager: ObservableObject {
                 githubPending.append((config, executable))
                 continue
             }
+            let workingDirectory = Self.workingDirectory(for: config.id.uuidString)
             let client = MCPClient(
                 executableURL: executable,
-                arguments: config.arguments,
+                arguments: Self.launchArguments(
+                    config, entry: catalogEntry, workingDirectory: workingDirectory
+                ),
                 environment: Self.childEnvironment(
                     searchPath: searchPath,
                     overrides: config.environment,
                     excluding: catalogEntry?.excludedEnvironment ?? []
                 ),
-                workingDirectory: Self.workingDirectory(for: config.id.uuidString)
+                workingDirectory: workingDirectory
             )
             pending.append((config, client))
         }
@@ -528,6 +661,19 @@ final class MCPHostManager: ObservableObject {
             environment[name] = nil
         }
         return environment
+    }
+
+    /// The shared connection exists only to list tools, so a folder-scoped server
+    /// starts against its own managed directory; real calls are re-rooted per chat.
+    private static func launchArguments(
+        _ config: MCPServerConfig,
+        entry: MCPCatalogEntry?,
+        workingDirectory: URL?
+    ) -> [String] {
+        guard entry?.requiresFolder == true, let workingDirectory else {
+            return config.arguments
+        }
+        return config.arguments + [workingDirectory.path]
     }
 
     private static func workingDirectory(for id: String) -> URL? {
