@@ -168,7 +168,6 @@ final class ChatViewModel: ObservableObject {
         let userMessageID: UUID
         let assistantMessageID: UUID
         let settings: NativSettings
-        let personalizationSnapshot: String
         let toolScope: ChatToolScope
         let imageGenerationModelID: String?
         let languageModelSupportsTools: Bool
@@ -1217,8 +1216,7 @@ final class ChatViewModel: ObservableObject {
     func archive(
         for sessionID: UUID,
         selectedModelID: String?,
-        systemPrompt: String,
-        includePersonalization: Bool = false
+        systemPrompt: String
     ) -> ChatArchive? {
         let session: ChatSession?
         if sessionID == currentSessionID {
@@ -1239,8 +1237,7 @@ final class ChatViewModel: ObservableObject {
         return ChatArchive(
             chat: session,
             modelRepositoryID: modelRepositoryID,
-            systemPrompt: session.importedSystemPrompt ?? systemPrompt,
-            includePersonalization: includePersonalization
+            systemPrompt: session.importedSystemPrompt ?? systemPrompt
         )
     }
 
@@ -1737,7 +1734,6 @@ final class ChatViewModel: ObservableObject {
     private func persistSubmission(_ submittedMessages: [ChatTranscriptMessage], settings: NativSettings) throws {
         guard let session = currentSession else { throw ChatWorkError.unavailable }
         let previousMessages = messages
-        if session.personalizationSnapshot == nil { currentSession?.capturePersonalization(settings.personalization) }
         messages = submittedMessages
         guard persistCurrentSession(updateTimestamp: true) else {
             messages = previousMessages
@@ -1836,7 +1832,6 @@ final class ChatViewModel: ObservableObject {
                 userMessageID: userMessageID,
                 assistantMessageID: UUID(),
                 settings: settings,
-                personalizationSnapshot: currentSession?.personalizationSnapshot ?? "",
                 toolScope: toolScope(for: sessionID, settings: settings),
                 imageGenerationModelID: imageGenerationModelID(for: sessionID)
                     ?? settings.imageGenerationModelID,
@@ -3098,9 +3093,6 @@ final class ChatViewModel: ObservableObject {
         var systemParts: [String] = []
         if !settings.systemPrompt.isEmpty {
             systemParts.append(settings.systemPrompt)
-        }
-        if !queuedRequest.personalizationSnapshot.isEmpty {
-            systemParts.append(queuedRequest.personalizationSnapshot)
         }
         if let projectPrompt = queuedRequest.toolScope.systemPrompt {
             systemParts.append(projectPrompt)

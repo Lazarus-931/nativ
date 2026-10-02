@@ -771,7 +771,7 @@ final class ChatWorkSessionTests: XCTestCase {
         let now = Date()
         let session = ChatSession(id: UUID(), title: "Existing", customTitle: "My existing chat",
                                   createdAt: now, updatedAt: now, messages: [],
-                                  importedSystemPrompt: "Keep this prompt", personalizationSnapshot: "Keep this context")
+                                  importedSystemPrompt: "Keep this prompt")
         XCTAssertTrue(store.saveSession(session))
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         return (root, store, session)
@@ -986,7 +986,6 @@ final class ChatWorkSessionTests: XCTestCase {
         let saved = try XCTUnwrap(store.loadSession(id: original.id))
         XCTAssertEqual(saved.customTitle, original.customTitle)
         XCTAssertEqual(saved.importedSystemPrompt, original.importedSystemPrompt)
-        XCTAssertEqual(saved.personalizationSnapshot, original.personalizationSnapshot)
         XCTAssertEqual(saved.workState?.selectedItem?.content, "# Hello")
         XCTAssertEqual(saved.workState?.isExpanded, true)
         chat.selectSession(original.id)

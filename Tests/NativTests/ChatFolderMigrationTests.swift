@@ -70,7 +70,6 @@ final class ChatFolderMigrationTests: XCTestCase {
         original.customTitle = "My conversation"
         original.sessionOrder = 7
         original.scheduledTaskID = "scheduled-task"
-        original.personalizationSnapshot = "Original personalization"
         let url = store.sessionURL(for: original.id)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try legacyData(original, folderID: UUID()).write(to: url)
