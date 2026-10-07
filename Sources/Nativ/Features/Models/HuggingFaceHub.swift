@@ -1875,6 +1875,7 @@ enum HuggingFaceDownloadOutput: Equatable {
 
 private enum HuggingFaceDownloadAttemptError: Error {
     case stalled
+    case interrupted(HuggingFaceDownloadFailure)
 }
 
 private final class HuggingFaceCapturedOutput: @unchecked Sendable {
@@ -1906,6 +1907,8 @@ final class HuggingFaceDownloadOperation: @unchecked Sendable {
     private static let finalizationStallTimeout: TimeInterval = 10 * 60
     private static let monitorInterval: TimeInterval = 0.5
     private static let maximumAttempts = 3
+    private static let maximumInterruptions = 10
+    private static let maximumRetryDelay: TimeInterval = 60
     private static let maximumCapturedOutputBytes = 256 * 1024
 
     private let executableURL: URL
@@ -1939,10 +1942,14 @@ final class HuggingFaceDownloadOperation: @unchecked Sendable {
         }
 
         let script = """
+        import inspect
         import os
         import sys
         import threading
         import time
+        import httpx
+        import huggingface_hub.file_download as hf_file_download
+        from huggingface_hub import constants as hf_constants
         from huggingface_hub import snapshot_download
         from huggingface_hub.utils import tqdm
 
@@ -1954,6 +1961,43 @@ final class HuggingFaceDownloadOperation: @unchecked Sendable {
             os._exit(0)
 
         threading.Thread(target=exit_if_parent_terminates, daemon=True).start()
+
+        def report_network_interruption(kind, error, traceback):
+            cause = error
+            while cause is not None:
+                if isinstance(cause, httpx.TransportError):
+                    print("__NATIV_INTERRUPTED__", flush=True)
+                    break
+                cause = cause.__cause__ or cause.__context__
+            sys.__excepthook__(kind, error, traceback)
+
+        sys.excepthook = report_network_interruption
+
+        def download_resumably(
+            incomplete_path, destination_path, url_to_download, headers, expected_size,
+            filename, force_download, etag, xet_file_data, tqdm_class=None,
+        ):
+            if destination_path.exists() and not force_download:
+                return
+            resume_size = incomplete_path.stat().st_size if incomplete_path.exists() else 0
+            if force_download or (expected_size is not None and resume_size > expected_size):
+                incomplete_path.unlink(missing_ok=True)
+                resume_size = 0
+            with incomplete_path.open("ab") as file:
+                hf_file_download.http_get(
+                    url_to_download, file, resume_size=resume_size, headers=headers,
+                    expected_size=expected_size, displayed_filename=filename, tqdm_class=tqdm_class,
+                )
+            hf_file_download._chmod_and_move(incomplete_path, destination_path)
+
+        if (
+            list(inspect.signature(hf_file_download._download_to_tmp_and_move).parameters)
+            == list(inspect.signature(download_resumably).parameters)
+            and "resume_size" in inspect.signature(hf_file_download.http_get).parameters
+            and hasattr(hf_file_download, "_chmod_and_move")
+        ):
+            hf_constants.HF_HUB_DISABLE_XET = True
+            hf_file_download._download_to_tmp_and_move = download_resumably
 
         ignored_patterns = \(HuggingFaceDownloadFilePolicy.pythonListLiteral)
         \(HuggingFaceDownloadPreflight.script)
@@ -2080,21 +2124,38 @@ final class HuggingFaceDownloadOperation: @unchecked Sendable {
     }
 
     func run() throws {
-        for attempt in 1...Self.maximumAttempts {
+        var stalls = 0
+        var interruptions = 0
+        while true {
             if isCancelled {
                 throw CancellationError()
             }
-            if attempt > 1 {
+            if stalls + interruptions > 0 {
                 phase(.retrying)
             }
             do {
                 try runAttempt()
                 return
             } catch HuggingFaceDownloadAttemptError.stalled {
-                guard attempt < Self.maximumAttempts else {
+                stalls += 1
+                guard stalls < Self.maximumAttempts else {
                     throw HuggingFaceHubError.downloadStalled
                 }
+            } catch HuggingFaceDownloadAttemptError.interrupted(let failure) {
+                interruptions += 1
+                guard interruptions < Self.maximumInterruptions else {
+                    throw failure
+                }
+                phase(.retrying)
+                waitBeforeRetry(min(pow(2, Double(interruptions)), Self.maximumRetryDelay))
             }
+        }
+    }
+
+    private func waitBeforeRetry(_ delay: TimeInterval) {
+        let deadline = Date.now.addingTimeInterval(delay)
+        while Date.now < deadline, !isCancelled {
+            Thread.sleep(forTimeInterval: Self.monitorInterval)
         }
     }
 
@@ -2240,7 +2301,11 @@ final class HuggingFaceDownloadOperation: @unchecked Sendable {
         }
         guard process.terminationStatus == 0 else {
             let message = String(decoding: output.snapshot(), as: UTF8.self)
-            throw HuggingFaceDownloadFailure(processOutput: message)
+            let failure = HuggingFaceDownloadFailure(processOutput: message)
+            if message.contains("__NATIV_INTERRUPTED__") {
+                throw HuggingFaceDownloadAttemptError.interrupted(failure)
+            }
+            throw failure
         }
     }
 
