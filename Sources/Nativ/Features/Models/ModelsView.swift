@@ -2389,23 +2389,26 @@ private struct IncompleteDownloadRow: View {
                 .help("Incomplete download")
                 .accessibilityLabel("Incomplete download")
 
-            Menu {
-                Button("Finish Download", systemImage: "arrow.down.circle", action: onResume)
-                Button("Delete Cache…", systemImage: "trash", role: .destructive) {
-                    isConfirmingDeletion = true
+            VStack(spacing: 6) {
+                Button(action: onResume) {
+                    Text("Resume")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .help("Resume downloading \(download.repoID)")
+
+                Button(role: .destructive) {
+                    isConfirmingDeletion = true
+                } label: {
+                    Text("Cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
                 .disabled(!canDelete)
-            } label: {
-                Image(systemName: "ellipsis")
-                    .rotationEffect(.degrees(90))
-                    .frame(width: 30, height: 30)
-                    .contentShape(Rectangle())
+                .help("Cancel the download and delete its partial files")
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
+            .controlSize(.small)
             .fixedSize()
-            .help("Download actions")
-            .accessibilityLabel("Actions for \(download.repoID)")
         }
     }
 }
